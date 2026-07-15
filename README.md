@@ -1,8 +1,12 @@
 # route_transit_feed
 
-タクシー配車アプリ向けの **時刻表データ基盤（まず福岡市地下鉄）**。
-福岡市交通局の公式Excel時刻表を自動取得・パースして静的JSONを生成し、
-GitHub Pages で無料配信する。アプリ側はこのJSONを読むだけ。
+タクシー配車アプリ向けの **時刻表データ基盤（福岡市地下鉄＋JR/西鉄）**。
+福岡市交通局の公式Excel（地下鉄）と Yahoo!路線情報（JR/西鉄）から時刻表を
+自動取得・パースして静的JSONを生成し、GitHub Pages で無料配信する。
+アプリ側はこのJSONを読むだけ。ダイヤ改正時の手動更新＋アプリ再ビルドを不要にする。
+
+- 出力: `out/subway_timetable.json`（地下鉄・公式Excel源）
+- 出力: `out/train_timetable.json`（JR/西鉄・Yahoo源・月1・2秒スロットル・差分検知）
 
 `route_event_feed` / `route_poi_feed` と同じ設計思想
 （公式源のみ・アプリはスクレイプしない・サーバー集約・秘密情報ゼロ）。
