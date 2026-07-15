@@ -19,8 +19,8 @@ import time
 import urllib.parse
 import urllib.request
 
-UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+# ブラウザ偽装をやめ、正直な名乗り（他feedと統一）。Yahooは正直UAでも __NEXT_DATA__ を返す。
+UA = "route_transit_feed/0.1 (+https://github.com/kirinkatanaboy-spec/route_transit_feed)"
 BASE = "https://transit.yahoo.co.jp"
 THROTTLE = float(os.environ.get("THROTTLE", "2.0"))  # 礼儀: 2秒以上
 FEED_URL = "https://kirinkatanaboy-spec.github.io/route_transit_feed/train_timetable.json"
