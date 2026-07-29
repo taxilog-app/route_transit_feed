@@ -51,13 +51,21 @@ def extract_next_data(html: str) -> dict:
     return json.loads(m.group(1))
 
 
-def find_station_id(name: str, query=None):
+def find_station_ids(name: str, query=None):
+    """優先順位付きの候補駅IDリストを返す（直接リダイレクトなら1件のみ）。
+
+    同名の乗換駅（例:「梅田」で 大阪梅田(阪急線)/梅田(地下鉄)/大阪梅田(阪神線) が
+    並ぶ、「なんば」で なんば(南海線)/なんば(地下鉄) が並ぶ 等）は、単純な
+    先頭一致やsubstring一致だけでは違う事業者の駅を拾ってしまう（実測・大阪
+    メトロのスクレイプで判明）。呼び出し側（scrape_all）が対象路線と一致する
+    候補が見つかるまで順に試せるよう、1件に絞らずリストで返す。
+    """
     # 検索は query(例 "春日 福岡")で同名駅を避ける。照合・出力は clean な name のまま。
     url = f"{BASE}/timetable/search?q={urllib.parse.quote(query or name)}"
     html, final_url = fetch(url)
     m = re.match(r'.*/timetable/(\d+)(?:[/?].*)?$', final_url)
     if m:
-        return m.group(1)
+        return [m.group(1)]
     matches = re.findall(
         r'href="/timetable/(\d+)(?:\?[^"]*)?"[^>]*>\s*([^<]+?)\s*</a>', html)
     norm = re.sub(r'[（(].*?[）)]', '', name).strip()
@@ -67,13 +75,27 @@ def find_station_id(name: str, query=None):
             continue
         seen.add(sid)
         cands.append((sid, label.strip()))
-    for sid, label in cands:
-        if label == name or label == norm:
-            return sid
-    for sid, label in cands:
-        if norm in label or label in norm:
-            return sid
-    return cands[0][0] if cands else None
+
+    exact = [sid for sid, label in cands if label == name or label == norm]
+    # 「駅名(◯◯線)」形式の候補は、末尾の(...)注記を外した上で完全一致するかを
+    # 次点で見る（優先度2）。
+    core_exact = [sid for sid, label in cands
+                  if re.sub(r'[（(][^）)]*[）)]\s*$', '', label).strip() == norm]
+    fuzzy = [sid for sid, label in cands if norm in label or label in norm]
+    all_ids = [sid for sid, _ in cands]
+
+    ordered, seen2 = [], set()
+    for group in (exact, core_exact, fuzzy, all_ids):
+        for sid in group:
+            if sid not in seen2:
+                seen2.add(sid)
+                ordered.append(sid)
+    return ordered
+
+
+def find_station_id(name: str, query=None):
+    ids = find_station_ids(name, query=query)
+    return ids[0] if ids else None
 
 
 def get_lines_at_station(station_id: str) -> list[dict]:
@@ -125,30 +147,53 @@ def scrape_all(stations) -> tuple[dict, list]:
     for idx, st in enumerate(stations, 1):
         name = st["name"]
         target_keys = set(st["lines"])
+        # まず駅名単体で検索する（Yahooはユニークな駅名なら直接リダイレクトで
+        # 解決する）。"<駅名> <都市名>" の組み合わせクエリはYahoo側で
+        # 「該当する駅はありませんでした」と0件になることがある(実測・大阪で
+        # 89駅全滅の原因だった)ため、st["search"]（同名駅対策）は
+        # 単体名で見つからなかった時のフォールバックとしてのみ使う。
         try:
-            sid = find_station_id(name, query=st.get("search"))
+            candidate_ids = find_station_ids(name, query=name)
             time.sleep(THROTTLE)
         except Exception as e:
             failed.append((name, "search", str(e)))
             continue
-        if not sid:
+        if not candidate_ids:
+            search_q = st.get("search")
+            if search_q and search_q != name:
+                try:
+                    candidate_ids = find_station_ids(name, query=search_q)
+                    time.sleep(THROTTLE)
+                except Exception as e:
+                    failed.append((name, "search_fallback", str(e)))
+                    continue
+        if not candidate_ids:
             failed.append((name, "noid", ""))
             continue
-        try:
-            lines = get_lines_at_station(sid)
-            time.sleep(THROTTLE)
-        except Exception as e:
-            failed.append((name, "lines", str(e)))
-            continue
-        # 対象路線のみ・rail_id重複除去
+
+        # 同名の乗換駅（梅田/なんば等）は候補が複数返る。上位3件まで、対象路線
+        # (target_keys)に一致するものが見つかるまで順に試す（無駄打ち防止の
+        # 上限。ほとんどの駅は候補1件で即決するため実害は無い）。
+        sid = None
         matched, seen_rail = [], set()
-        for line in lines:
-            for key in target_keys:
-                if any(re.search(p, line["rail_name"]) for p in LINE_PATTERNS.get(key, [])):
-                    if line["rail_id"] not in seen_rail:
-                        seen_rail.add(line["rail_id"])
-                        matched.append({**line, "line_key": key})
-                    break
+        for cid in candidate_ids[:3]:
+            try:
+                lines = get_lines_at_station(cid)
+                time.sleep(THROTTLE)
+            except Exception as e:
+                failed.append((name, f"lines_{cid}", str(e)))
+                continue
+            cand_matched, cand_seen_rail = [], set()
+            for line in lines:
+                for key in target_keys:
+                    if any(re.search(p, line["rail_name"]) for p in LINE_PATTERNS.get(key, [])):
+                        if line["rail_id"] not in cand_seen_rail:
+                            cand_seen_rail.add(line["rail_id"])
+                            cand_matched.append({**line, "line_key": key})
+                        break
+            if cand_matched:
+                sid, matched, seen_rail = cid, cand_matched, cand_seen_rail
+                break
         if not matched:
             failed.append((name, "noroute", ""))
             continue
