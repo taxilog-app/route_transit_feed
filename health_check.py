@@ -14,13 +14,20 @@
   3. その中の最初の `<dt>` が既知の状態語に当たるか（表記変更を検出）
   4. エリアページ area/7 が期待の形か（表が在る or 平常時の定型文が在る）
 
+もう一つ、時刻表（次の電車・終電）が古くなっていないかも見張る。
+時刻表は月1回ハブが作り直す仕組みで、失敗すると前回分を残す（正しい判断）が、
+失敗したこと自体は誰にも通知されない穴がある（指示書B）。ここで generated_at
+の経過日数を見て、60日超は警告・90日超は失敗にする。
+
 終了コード:
-  0 = 正常 / 1 = 壊れている（過半が読めない・全滅）
+  0 = 正常 / 1 = 壊れている（運行情報が過半読めない・全滅、または時刻表が90日超）
   GitHub Actions の定期実行が失敗するとリポジトリ所有者にメールが飛ぶ。
   これが「変動費0円の通知」。追加のサービス契約は不要。
 
-費用: GitHub Actions（publicリポジトリ）は無料枠。1日12リクエストのみ。
+費用: GitHub Actions（publicリポジトリ）は無料枠。1日14リクエストのみ
+      （路線11＋エリア1＋時刻表2。時刻表は先頭のみRange取得で軽量）。
 """
+import datetime
 import json
 import os
 import re
@@ -34,6 +41,15 @@ THROTTLE = float(os.environ.get("THROTTLE", "2.0"))  # 礼儀: 2秒以上あけ�
 TIMEOUT = 20
 
 AREA_URL = "https://transit.yahoo.co.jp/diainfo/area/7"
+
+# 時刻表の鮮度チェック対象（指示書B）。アプリ lib/services/train_service.dart の
+# _subwayFeedUrl / _trainFeedUrl と同じURL。
+TIMETABLE_TARGETS = [
+    ("https://taxilog-app.github.io/route_transit_feed/subway_timetable.json", "地下鉄時刻表"),
+    ("https://taxilog-app.github.io/route_transit_feed/train_timetable.json", "JR/西鉄時刻表"),
+]
+TIMETABLE_STALE_DAYS = 60      # 超えたら警告（メールは飛ばさない）
+TIMETABLE_VERY_STALE_DAYS = 90  # 超えたら失敗（メールが飛ぶ）
 
 # ⚠️ アプリ lib/services/train_service.dart の _individualTargets と同じ内容にする。
 #    片方だけ増減させると壊れ検知が本番とズレる。
@@ -112,6 +128,63 @@ def check_individual(url, name):
     return r
 
 
+GENERATED_AT_RE = re.compile(r'"generated_at"\s*:\s*"([^"]+)"')
+
+
+def fetch_head(url, max_bytes=2000):
+    """先頭 max_bytes だけ取得する（generated_at はJSON先頭150バイト程度に在る）。
+    Rangeが効かないサーバーなら普通に200で全体が返る（GitHub Pagesは効くが、
+    効かなくても正しく動く＝フォールバック不要）。"""
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": UA, "Range": f"bytes=0-{max_bytes}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
+            return res.status, res.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, ""
+    except Exception as e:  # 通信断・タイムアウト
+        print(f"    fetch error: {e}", file=sys.stderr)
+        return 0, ""
+
+
+def check_timetable(url, name):
+    """時刻表フィードの generated_at を読み、経過日数から鮮度を判定する。
+    古くてもデータは使い続ける前提（指示書B）なので、ここは検知するだけ。"""
+    code, body = fetch_head(url)
+    r = {"name": name, "url": url, "http": code, "ok": False,
+         "generated_at": None, "age_days": None, "freshness": "unknown"}
+    if code not in (200, 206) or not body:
+        r["reason"] = f"取得できない（HTTP {code}）"
+        return r
+    m = GENERATED_AT_RE.search(body)
+    if not m:
+        r["reason"] = "generated_at が見つからない（先頭を広げて取得し直す必要があるかも）"
+        return r
+    try:
+        generated_at = datetime.datetime.fromisoformat(m.group(1))
+    except ValueError:
+        r["reason"] = f"generated_at の形式が読めない（{m.group(1)}）"
+        return r
+    now = datetime.datetime.now(datetime.timezone.utc)
+    if generated_at.tzinfo is None:
+        generated_at = generated_at.replace(tzinfo=datetime.timezone.utc)
+    age_days = (now - generated_at).days
+    r["generated_at"] = generated_at.isoformat()
+    r["age_days"] = age_days
+    if age_days > TIMETABLE_VERY_STALE_DAYS:
+        r["freshness"] = "veryStale"
+        r["reason"] = f"最終更新から{age_days}日経過（{TIMETABLE_VERY_STALE_DAYS}日超）"
+    elif age_days > TIMETABLE_STALE_DAYS:
+        r["freshness"] = "stale"
+        r["reason"] = f"最終更新から{age_days}日経過（{TIMETABLE_STALE_DAYS}日超）"
+    else:
+        r["freshness"] = "fresh"
+        r["ok"] = True
+    return r
+
+
 def check_area():
     code, html = fetch(AREA_URL)
     r = {"name": "九州エリア一覧", "url": AREA_URL, "http": code, "ok": False}
@@ -141,6 +214,15 @@ def main():
     print(f"  {'OK ' if area['ok'] else 'NG '} {area['name']}: "
           f"{'正常' if area['ok'] else area.get('reason')}")
 
+    print("\n時刻表の鮮度チェック（指示書B）")
+    timetable_results = []
+    for url, name in TIMETABLE_TARGETS:
+        res = check_timetable(url, name)
+        mark = "OK " if res["ok"] else "NG "
+        detail = res.get("reason") or f"{res.get('age_days')}日前"
+        print(f"  {mark} {name}: {detail}")
+        timetable_results.append(res)
+
     total = len(results)
     ok = sum(1 for r in results if r["ok"])
     blocks = sum(1 for r in results if r["block_found"])
@@ -159,12 +241,18 @@ def main():
     else:
         state, reason = "ok", "正常"
 
+    # 時刻表の判定は運行情報の判定と独立（指示書B：既存の判定を変えない）。
+    timetable_very_stale = [r for r in timetable_results if r["freshness"] == "veryStale"]
+    timetable_stale = [r for r in timetable_results if r["freshness"] == "stale"]
+    timetable_unreadable = [r for r in timetable_results if r["freshness"] == "unknown"]
+
     report = {
         "state": state, "reason": reason,
         "ok": ok, "total": total, "block_found": blocks,
         "area_ok": area["ok"],
         "checked_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
         "lines": results, "area": area,
+        "timetables": timetable_results,
     }
     os.makedirs("out", exist_ok=True)
     with open("out/train_health.json", "w", encoding="utf-8") as f:
@@ -176,20 +264,45 @@ def main():
     if ng:
         summary += "\n### 読めなかった路線\n" + "".join(
             f"- {r['name']}: {r.get('reason')}\n" for r in ng)
+
+    summary += "\n## 時刻表の鮮度\n\n"
+    for r in timetable_results:
+        if r["generated_at"]:
+            summary += f"- {r['name']}: 最終更新 {r['generated_at']}（{r['age_days']}日前）\n"
+        else:
+            summary += f"- {r['name']}: {r.get('reason')}\n"
+
     print("\n" + summary)
     path = os.environ.get("GITHUB_STEP_SUMMARY")
     if path:
         with open(path, "a", encoding="utf-8") as f:
             f.write(summary)
 
+    failed = False
     if state == "broken":
         print("::error::電車運行情報の読み取りが壊れています。"
               "アプリは『平常運転』と表示せず取得エラーを出しますが、"
               "train_service.dart の解析を直す必要があります。")
-        return 1
-    if state == "degraded":
+        failed = True
+    elif state == "degraded":
         print("::warning::一部の路線が読めていません（アプリは表示を続けます）")
-    return 0
+
+    if timetable_very_stale:
+        names = "・".join(r["name"] for r in timetable_very_stale)
+        print(f"::error::時刻表が{TIMETABLE_VERY_STALE_DAYS}日以上更新されていません（{names}）。"
+              "アプリは古いデータのまま表示を続けます。route_transit_feed の配信を確認してください。")
+        failed = True
+    if timetable_unreadable:
+        names = "・".join(r["name"] for r in timetable_unreadable)
+        print(f"::error::時刻表の更新日を読み取れません（{names}）。"
+              "配信URLまたはJSONの形式を確認してください。")
+        failed = True
+    if timetable_stale:
+        names = "・".join(r["name"] for r in timetable_stale)
+        print(f"::warning::時刻表が{TIMETABLE_STALE_DAYS}日以上更新されていません（{names}）。"
+              "まだ大半の便は合っていますが、ダイヤ改正を跨いだ可能性があります。")
+
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
