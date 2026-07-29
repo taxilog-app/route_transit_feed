@@ -25,7 +25,7 @@ import requests
 import xlrd
 from openpyxl import load_workbook
 
-UA = "route_transit_feed/0.1 (+https://github.com/kirinkatanaboy-spec/route_transit_feed)"
+UA = "route_transit_feed/0.1 (+https://github.com/taxilog-app/route_transit_feed)"
 BASE = "https://subway.city.fukuoka.lg.jp/subway/about/data"
 URL_KUKO = f"{BASE}/kukohakozaki_timetable.xls"       # 空港線・箱崎線
 URL_NANAKUMA = f"{BASE}/nanakuma_timetable.xlsx"       # 七隈線

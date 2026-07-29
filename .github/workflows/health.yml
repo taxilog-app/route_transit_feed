@@ -1,0 +1,25 @@
+name: health-check
+
+# 電車運行情報（Yahoo）の読み取りが壊れていないかを毎日見張る。
+# 毎日 JST 6:00（= UTC 21:00 前日）＋手動。失敗するとGitHubからリポジトリ所有者へ
+# メールが飛ぶ＝変動費0円の異常通知。
+on:
+  schedule:
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+# 読み取りだけ。Pagesへは配信しない（時刻表の配信ジョブと競合させない）。
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # サプライチェーン対策: 公式actionをコミットSHAで固定
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      # 壊れていれば非0終了 → ワークフロー失敗 → 所有者へ通知メール
+      - run: python health_check.py

@@ -1,91 +1,655 @@
 {
-  "_comment": "福岡交通圏の鉄道駅一覧（地下鉄除く）。スクレイピングのターゲット定義。",
-  "_lines": {
-    "kagoshima": "JR鹿児島本線",
-    "kashii": "JR香椎線",
-    "sasaguri": "JR篠栗線（福北ゆたか線）",
-    "chikuhi": "JR筑肥線",
-    "shinkansen_sanyo": "山陽新幹線",
-    "shinkansen_kyushu": "九州新幹線",
-    "nishitetsu_omuta": "西鉄天神大牟田線",
-    "nishitetsu_dazaifu": "西鉄太宰府線"
+ "_comment": "福岡交通圏の鉄道駅一覧（地下鉄除く）。スクレイピングのターゲット定義。",
+ "_lines": {
+  "kagoshima": "JR鹿児島本線",
+  "kashii": "JR香椎線",
+  "sasaguri": "JR篠栗線（福北ゆたか線）",
+  "chikuhi": "JR筑肥線",
+  "shinkansen_sanyo": "山陽新幹線",
+  "shinkansen_kyushu": "九州新幹線",
+  "nishitetsu_omuta": "西鉄天神大牟田線",
+  "nishitetsu_dazaifu": "西鉄太宰府線"
+ },
+ "version": 1,
+ "stations": [
+  {
+   "name": "千鳥",
+   "city": "古賀市",
+   "lat": 33.7311,
+   "lng": 130.4838,
+   "lines": [
+    "kagoshima"
+   ]
   },
-  "version": 1,
-  "stations": [
-    {"name": "千鳥", "city": "古賀市", "lat": 33.7311, "lng": 130.4838, "lines": ["kagoshima"]},
-    {"name": "古賀", "city": "古賀市", "lat": 33.7233, "lng": 130.4781, "lines": ["kagoshima"]},
-    {"name": "ししぶ", "city": "古賀市", "lat": 33.7079, "lng": 130.4699, "lines": ["kagoshima"]},
-    {"name": "新宮中央", "city": "糟屋郡新宮町", "lat": 33.7008, "lng": 130.4633, "lines": ["kagoshima"]},
-    {"name": "福工大前", "city": "福岡市東区", "lat": 33.6906, "lng": 130.4557, "lines": ["kagoshima"]},
-    {"name": "九産大前", "city": "福岡市東区", "lat": 33.6743, "lng": 130.4458, "lines": ["kagoshima"]},
-    {"name": "香椎", "city": "福岡市東区", "lat": 33.6581, "lng": 130.4396, "lines": ["kagoshima", "kashii"]},
-    {"name": "千早", "city": "福岡市東区", "lat": 33.6440, "lng": 130.4329, "lines": ["kagoshima"]},
-    {"name": "箱崎", "city": "福岡市東区", "lat": 33.6209, "lng": 130.4203, "lines": ["kagoshima"]},
-    {"name": "吉塚", "city": "福岡市博多区", "lat": 33.6029, "lng": 130.4243, "lines": ["kagoshima", "sasaguri"]},
-    {"name": "博多", "city": "福岡市博多区", "lat": 33.5900, "lng": 130.4206, "lines": ["kagoshima", "shinkansen_sanyo", "shinkansen_kyushu"]},
-    {"name": "竹下", "city": "福岡市博多区", "lat": 33.5709, "lng": 130.4324, "lines": ["kagoshima"]},
-    {"name": "笹原", "city": "福岡市博多区", "lat": 33.5573, "lng": 130.4385, "lines": ["kagoshima"]},
-    {"name": "南福岡", "city": "福岡市博多区", "lat": 33.5466, "lng": 130.4433, "lines": ["kagoshima"]},
-    {"name": "春日", "city": "春日市", "lat": 33.5310, "lng": 130.4498, "lines": ["kagoshima"]},
-    {"name": "大野城", "city": "大野城市", "lat": 33.5170, "lng": 130.4673, "lines": ["kagoshima"]},
-    {"name": "水城", "city": "大野城市", "lat": 33.5055, "lng": 130.4830, "lines": ["kagoshima"]},
-    {"name": "都府楼南", "city": "太宰府市", "lat": 33.4922, "lng": 130.4985, "lines": ["kagoshima"]},
-    {"name": "二日市", "city": "筑紫野市", "lat": 33.4870, "lng": 130.5141, "lines": ["kagoshima"]},
-    {"name": "原田", "city": "筑紫野市", "lat": 33.4530, "lng": 130.5404, "lines": ["kagoshima"]},
-
-    {"name": "西戸崎", "city": "福岡市東区", "lat": 33.6679, "lng": 130.3528, "lines": ["kashii"]},
-    {"name": "海ノ中道", "city": "福岡市東区", "lat": 33.6620, "lng": 130.3661, "lines": ["kashii"]},
-    {"name": "雁ノ巣", "city": "福岡市東区", "lat": 33.6688, "lng": 130.3994, "lines": ["kashii"]},
-    {"name": "奈多", "city": "福岡市東区", "lat": 33.6685, "lng": 130.4090, "lines": ["kashii"]},
-    {"name": "和白", "city": "福岡市東区", "lat": 33.6740, "lng": 130.4203, "lines": ["kashii"]},
-    {"name": "香椎神宮", "city": "福岡市東区", "lat": 33.6622, "lng": 130.4506, "lines": ["kashii"]},
-    {"name": "舞松原", "city": "福岡市東区", "lat": 33.6586, "lng": 130.4624, "lines": ["kashii"]},
-    {"name": "土井", "city": "福岡市東区", "lat": 33.6537, "lng": 130.4710, "lines": ["kashii"]},
-    {"name": "伊賀", "city": "糟屋郡粕屋町", "lat": 33.6440, "lng": 130.4763, "lines": ["kashii"]},
-    {"name": "長者原", "city": "糟屋郡粕屋町", "lat": 33.6332, "lng": 130.4791, "lines": ["kashii", "sasaguri"]},
-    {"name": "酒殿", "city": "糟屋郡粕屋町", "lat": 33.6232, "lng": 130.4799, "lines": ["kashii"]},
-    {"name": "須恵", "city": "糟屋郡須恵町", "lat": 33.6111, "lng": 130.4815, "lines": ["kashii"]},
-    {"name": "須恵中央", "city": "糟屋郡須恵町", "lat": 33.6017, "lng": 130.4859, "lines": ["kashii"]},
-    {"name": "新原", "city": "糟屋郡須恵町", "lat": 33.5946, "lng": 130.4956, "lines": ["kashii"]},
-    {"name": "宇美", "city": "糟屋郡宇美町", "lat": 33.5688, "lng": 130.5043, "lines": ["kashii"]},
-
-    {"name": "柚須", "city": "糟屋郡粕屋町", "lat": 33.6122, "lng": 130.4533, "lines": ["sasaguri"]},
-    {"name": "原町", "city": "糟屋郡粕屋町", "lat": 33.6191, "lng": 130.4636, "lines": ["sasaguri"]},
-    {"name": "門松", "city": "糟屋郡篠栗町", "lat": 33.6383, "lng": 130.5036, "lines": ["sasaguri"]},
-    {"name": "篠栗", "city": "糟屋郡篠栗町", "lat": 33.6325, "lng": 130.5198, "lines": ["sasaguri"]},
-    {"name": "筑前山手", "city": "糟屋郡篠栗町", "lat": 33.6260, "lng": 130.5462, "lines": ["sasaguri"]},
-    {"name": "城戸南蔵院前", "city": "糟屋郡篠栗町", "lat": 33.6240, "lng": 130.5613, "lines": ["sasaguri"]},
-    {"name": "九郎原", "city": "糟屋郡篠栗町", "lat": 33.6195, "lng": 130.5825, "lines": ["sasaguri"]},
-
-    {"name": "下山門", "city": "福岡市西区", "lat": 33.5830, "lng": 130.3120, "lines": ["chikuhi"]},
-    {"name": "今宿", "city": "福岡市西区", "lat": 33.5811, "lng": 130.2868, "lines": ["chikuhi"]},
-    {"name": "九大学研都市", "city": "福岡市西区", "lat": 33.5808, "lng": 130.2649, "lines": ["chikuhi"]},
-    {"name": "周船寺", "city": "福岡市西区", "lat": 33.5803, "lng": 130.2492, "lines": ["chikuhi"]},
-    {"name": "波多江", "city": "糸島市", "lat": 33.5751, "lng": 130.2244, "lines": ["chikuhi"]},
-    {"name": "糸島高校前", "city": "糸島市", "lat": 33.5697, "lng": 130.2103, "lines": ["chikuhi"]},
-    {"name": "筑前前原", "city": "糸島市", "lat": 33.5618, "lng": 130.1965, "lines": ["chikuhi"]},
-    {"name": "美咲が丘", "city": "糸島市", "lat": 33.5602, "lng": 130.1791, "lines": ["chikuhi"]},
-    {"name": "加布里", "city": "糸島市", "lat": 33.5576, "lng": 130.1659, "lines": ["chikuhi"]},
-    {"name": "一貴山", "city": "糸島市", "lat": 33.5440, "lng": 130.1497, "lines": ["chikuhi"]},
-
-    {"name": "西鉄福岡(天神)", "city": "福岡市中央区", "lat": 33.5898, "lng": 130.4001, "lines": ["nishitetsu_omuta"]},
-    {"name": "薬院", "city": "福岡市中央区", "lat": 33.5809, "lng": 130.3977, "lines": ["nishitetsu_omuta"]},
-    {"name": "西鉄平尾", "city": "福岡市中央区", "lat": 33.5727, "lng": 130.4012, "lines": ["nishitetsu_omuta"]},
-    {"name": "高宮", "city": "福岡市南区", "lat": 33.5650, "lng": 130.4054, "lines": ["nishitetsu_omuta"]},
-    {"name": "大橋", "city": "福岡市南区", "lat": 33.5556, "lng": 130.4266, "lines": ["nishitetsu_omuta"]},
-    {"name": "井尻", "city": "福岡市南区", "lat": 33.5485, "lng": 130.4396, "lines": ["nishitetsu_omuta"]},
-    {"name": "雑餉隈", "city": "福岡市博多区", "lat": 33.5413, "lng": 130.4513, "lines": ["nishitetsu_omuta"]},
-    {"name": "春日原", "city": "春日市", "lat": 33.5349, "lng": 130.4693, "lines": ["nishitetsu_omuta"]},
-    {"name": "白木原", "city": "大野城市", "lat": 33.5258, "lng": 130.4734, "lines": ["nishitetsu_omuta"]},
-    {"name": "下大利", "city": "大野城市", "lat": 33.5178, "lng": 130.4768, "lines": ["nishitetsu_omuta"]},
-    {"name": "都府楼前", "city": "太宰府市", "lat": 33.5060, "lng": 130.4895, "lines": ["nishitetsu_omuta"]},
-    {"name": "西鉄二日市", "city": "筑紫野市", "lat": 33.4895, "lng": 130.5102, "lines": ["nishitetsu_omuta", "nishitetsu_dazaifu"]},
-    {"name": "紫", "city": "筑紫野市", "lat": 33.4845, "lng": 130.5181, "lines": ["nishitetsu_omuta"]},
-    {"name": "朝倉街道", "city": "筑紫野市", "lat": 33.4720, "lng": 130.5230, "lines": ["nishitetsu_omuta"]},
-    {"name": "桜台", "city": "筑紫野市", "lat": 33.4622, "lng": 130.5224, "lines": ["nishitetsu_omuta"]},
-    {"name": "筑紫", "city": "筑紫野市", "lat": 33.4499, "lng": 130.5176, "lines": ["nishitetsu_omuta"]},
-
-    {"name": "西鉄五条", "city": "太宰府市", "lat": 33.5118, "lng": 130.5300, "lines": ["nishitetsu_dazaifu"]},
-    {"name": "太宰府", "city": "太宰府市", "lat": 33.5181, "lng": 130.5347, "lines": ["nishitetsu_dazaifu"]}
-  ]
+  {
+   "name": "古賀",
+   "city": "古賀市",
+   "lat": 33.7233,
+   "lng": 130.4781,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "ししぶ",
+   "city": "古賀市",
+   "lat": 33.7079,
+   "lng": 130.4699,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "新宮中央",
+   "city": "糟屋郡新宮町",
+   "lat": 33.7008,
+   "lng": 130.4633,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "福工大前",
+   "city": "福岡市東区",
+   "lat": 33.6906,
+   "lng": 130.4557,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "九産大前",
+   "city": "福岡市東区",
+   "lat": 33.6743,
+   "lng": 130.4458,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "香椎",
+   "city": "福岡市東区",
+   "lat": 33.6581,
+   "lng": 130.4396,
+   "lines": [
+    "kagoshima",
+    "kashii"
+   ]
+  },
+  {
+   "name": "千早",
+   "city": "福岡市東区",
+   "lat": 33.644,
+   "lng": 130.4329,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "箱崎",
+   "city": "福岡市東区",
+   "lat": 33.6209,
+   "lng": 130.4203,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "吉塚",
+   "city": "福岡市博多区",
+   "lat": 33.6029,
+   "lng": 130.4243,
+   "lines": [
+    "kagoshima",
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "博多",
+   "city": "福岡市博多区",
+   "lat": 33.59,
+   "lng": 130.4206,
+   "lines": [
+    "kagoshima",
+    "shinkansen_sanyo",
+    "shinkansen_kyushu"
+   ]
+  },
+  {
+   "name": "竹下",
+   "city": "福岡市博多区",
+   "lat": 33.5709,
+   "lng": 130.4324,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "笹原",
+   "city": "福岡市博多区",
+   "lat": 33.5573,
+   "lng": 130.4385,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "南福岡",
+   "city": "福岡市博多区",
+   "lat": 33.5466,
+   "lng": 130.4433,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "春日",
+   "city": "春日市",
+   "lat": 33.531,
+   "lng": 130.4498,
+   "lines": [
+    "kagoshima"
+   ],
+   "search": "春日 福岡"
+  },
+  {
+   "name": "大野城",
+   "city": "大野城市",
+   "lat": 33.517,
+   "lng": 130.4673,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "水城",
+   "city": "大野城市",
+   "lat": 33.5055,
+   "lng": 130.483,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "都府楼南",
+   "city": "太宰府市",
+   "lat": 33.4922,
+   "lng": 130.4985,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "二日市",
+   "city": "筑紫野市",
+   "lat": 33.487,
+   "lng": 130.5141,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "原田",
+   "city": "筑紫野市",
+   "lat": 33.453,
+   "lng": 130.5404,
+   "lines": [
+    "kagoshima"
+   ]
+  },
+  {
+   "name": "西戸崎",
+   "city": "福岡市東区",
+   "lat": 33.6679,
+   "lng": 130.3528,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "海ノ中道",
+   "city": "福岡市東区",
+   "lat": 33.662,
+   "lng": 130.3661,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "雁ノ巣",
+   "city": "福岡市東区",
+   "lat": 33.6688,
+   "lng": 130.3994,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "奈多",
+   "city": "福岡市東区",
+   "lat": 33.6685,
+   "lng": 130.409,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "和白",
+   "city": "福岡市東区",
+   "lat": 33.674,
+   "lng": 130.4203,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "香椎神宮",
+   "city": "福岡市東区",
+   "lat": 33.6622,
+   "lng": 130.4506,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "舞松原",
+   "city": "福岡市東区",
+   "lat": 33.6586,
+   "lng": 130.4624,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "土井",
+   "city": "福岡市東区",
+   "lat": 33.6537,
+   "lng": 130.471,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "伊賀",
+   "city": "糟屋郡粕屋町",
+   "lat": 33.644,
+   "lng": 130.4763,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "長者原",
+   "city": "糟屋郡粕屋町",
+   "lat": 33.6332,
+   "lng": 130.4791,
+   "lines": [
+    "kashii",
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "酒殿",
+   "city": "糟屋郡粕屋町",
+   "lat": 33.6232,
+   "lng": 130.4799,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "須恵",
+   "city": "糟屋郡須恵町",
+   "lat": 33.6111,
+   "lng": 130.4815,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "須恵中央",
+   "city": "糟屋郡須恵町",
+   "lat": 33.6017,
+   "lng": 130.4859,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "新原",
+   "city": "糟屋郡須恵町",
+   "lat": 33.5946,
+   "lng": 130.4956,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "宇美",
+   "city": "糟屋郡宇美町",
+   "lat": 33.5688,
+   "lng": 130.5043,
+   "lines": [
+    "kashii"
+   ]
+  },
+  {
+   "name": "柚須",
+   "city": "糟屋郡粕屋町",
+   "lat": 33.6122,
+   "lng": 130.4533,
+   "lines": [
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "原町",
+   "city": "糟屋郡粕屋町",
+   "lat": 33.6191,
+   "lng": 130.4636,
+   "lines": [
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "門松",
+   "city": "糟屋郡篠栗町",
+   "lat": 33.6383,
+   "lng": 130.5036,
+   "lines": [
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "篠栗",
+   "city": "糟屋郡篠栗町",
+   "lat": 33.6325,
+   "lng": 130.5198,
+   "lines": [
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "筑前山手",
+   "city": "糟屋郡篠栗町",
+   "lat": 33.626,
+   "lng": 130.5462,
+   "lines": [
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "城戸南蔵院前",
+   "city": "糟屋郡篠栗町",
+   "lat": 33.624,
+   "lng": 130.5613,
+   "lines": [
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "九郎原",
+   "city": "糟屋郡篠栗町",
+   "lat": 33.6195,
+   "lng": 130.5825,
+   "lines": [
+    "sasaguri"
+   ]
+  },
+  {
+   "name": "下山門",
+   "city": "福岡市西区",
+   "lat": 33.583,
+   "lng": 130.312,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "今宿",
+   "city": "福岡市西区",
+   "lat": 33.5811,
+   "lng": 130.2868,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "九大学研都市",
+   "city": "福岡市西区",
+   "lat": 33.5808,
+   "lng": 130.2649,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "周船寺",
+   "city": "福岡市西区",
+   "lat": 33.5803,
+   "lng": 130.2492,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "波多江",
+   "city": "糸島市",
+   "lat": 33.5751,
+   "lng": 130.2244,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "糸島高校前",
+   "city": "糸島市",
+   "lat": 33.5697,
+   "lng": 130.2103,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "筑前前原",
+   "city": "糸島市",
+   "lat": 33.5618,
+   "lng": 130.1965,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "美咲が丘",
+   "city": "糸島市",
+   "lat": 33.5602,
+   "lng": 130.1791,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "加布里",
+   "city": "糸島市",
+   "lat": 33.5576,
+   "lng": 130.1659,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "一貴山",
+   "city": "糸島市",
+   "lat": 33.544,
+   "lng": 130.1497,
+   "lines": [
+    "chikuhi"
+   ]
+  },
+  {
+   "name": "西鉄福岡(天神)",
+   "city": "福岡市中央区",
+   "lat": 33.5898,
+   "lng": 130.4001,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "薬院",
+   "city": "福岡市中央区",
+   "lat": 33.5809,
+   "lng": 130.3977,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "西鉄平尾",
+   "city": "福岡市中央区",
+   "lat": 33.5727,
+   "lng": 130.4012,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "高宮",
+   "city": "福岡市南区",
+   "lat": 33.565,
+   "lng": 130.4054,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "大橋",
+   "city": "福岡市南区",
+   "lat": 33.5556,
+   "lng": 130.4266,
+   "lines": [
+    "nishitetsu_omuta"
+   ],
+   "search": "大橋 福岡"
+  },
+  {
+   "name": "井尻",
+   "city": "福岡市南区",
+   "lat": 33.5485,
+   "lng": 130.4396,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "雑餉隈",
+   "city": "福岡市博多区",
+   "lat": 33.5413,
+   "lng": 130.4513,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "春日原",
+   "city": "春日市",
+   "lat": 33.5349,
+   "lng": 130.4693,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "白木原",
+   "city": "大野城市",
+   "lat": 33.5258,
+   "lng": 130.4734,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "下大利",
+   "city": "大野城市",
+   "lat": 33.5178,
+   "lng": 130.4768,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "都府楼前",
+   "city": "太宰府市",
+   "lat": 33.506,
+   "lng": 130.4895,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "西鉄二日市",
+   "city": "筑紫野市",
+   "lat": 33.4895,
+   "lng": 130.5102,
+   "lines": [
+    "nishitetsu_omuta",
+    "nishitetsu_dazaifu"
+   ]
+  },
+  {
+   "name": "紫",
+   "city": "筑紫野市",
+   "lat": 33.4845,
+   "lng": 130.5181,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "朝倉街道",
+   "city": "筑紫野市",
+   "lat": 33.472,
+   "lng": 130.523,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "桜台",
+   "city": "筑紫野市",
+   "lat": 33.4622,
+   "lng": 130.5224,
+   "lines": [
+    "nishitetsu_omuta"
+   ],
+   "search": "桜台 福岡"
+  },
+  {
+   "name": "筑紫",
+   "city": "筑紫野市",
+   "lat": 33.4499,
+   "lng": 130.5176,
+   "lines": [
+    "nishitetsu_omuta"
+   ]
+  },
+  {
+   "name": "西鉄五条",
+   "city": "太宰府市",
+   "lat": 33.5118,
+   "lng": 130.53,
+   "lines": [
+    "nishitetsu_dazaifu"
+   ]
+  },
+  {
+   "name": "太宰府",
+   "city": "太宰府市",
+   "lat": 33.5181,
+   "lng": 130.5347,
+   "lines": [
+    "nishitetsu_dazaifu"
+   ]
+  }
+ ]
 }

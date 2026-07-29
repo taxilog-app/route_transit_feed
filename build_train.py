@@ -20,10 +20,10 @@ import urllib.parse
 import urllib.request
 
 # ブラウザ偽装をやめ、正直な名乗り（他feedと統一）。Yahooは正直UAでも __NEXT_DATA__ を返す。
-UA = "route_transit_feed/0.1 (+https://github.com/kirinkatanaboy-spec/route_transit_feed)"
+UA = "route_transit_feed/0.1 (+https://github.com/taxilog-app/route_transit_feed)"
 BASE = "https://transit.yahoo.co.jp"
 THROTTLE = float(os.environ.get("THROTTLE", "2.0"))  # 礼儀: 2秒以上
-FEED_URL = "https://kirinkatanaboy-spec.github.io/route_transit_feed/train_timetable.json"
+FEED_URL = "https://taxilog-app.github.io/route_transit_feed/train_timetable.json"
 MIN_STATIONS = 40  # これ未満は取得崩れとみなし配信中止
 
 # 路線key → Yahoo路線名パターン
@@ -51,8 +51,9 @@ def extract_next_data(html: str) -> dict:
     return json.loads(m.group(1))
 
 
-def find_station_id(name: str):
-    url = f"{BASE}/timetable/search?q={urllib.parse.quote(name)}"
+def find_station_id(name: str, query=None):
+    # 検索は query(例 "春日 福岡")で同名駅を避ける。照合・出力は clean な name のまま。
+    url = f"{BASE}/timetable/search?q={urllib.parse.quote(query or name)}"
     html, final_url = fetch(url)
     m = re.match(r'.*/timetable/(\d+)(?:[/?].*)?$', final_url)
     if m:
@@ -125,7 +126,7 @@ def scrape_all(stations) -> tuple[dict, list]:
         name = st["name"]
         target_keys = set(st["lines"])
         try:
-            sid = find_station_id(name)
+            sid = find_station_id(name, query=st.get("search"))
             time.sleep(THROTTLE)
         except Exception as e:
             failed.append((name, "search", str(e)))
