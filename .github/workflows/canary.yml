@@ -8,7 +8,10 @@ name: canary-timetable
 # 月1のフル取得(build.yml)は安全網として残す＝カナリアが見逃しても正される。
 on:
   schedule:
-    - cron: "0 20 * * *"  # 毎日 JST5:00 = UTC前日20:00（定期実行は数十分遅れることがある）
+    # 毎日 JST5:30 = UTC前日20:30（定期実行は数十分遅れることがあるので時刻は決め打ちしない）。
+    # build.yml(月1)が "0 20 1 * *"＝JST5:00 なので、毎月1日に同時起動して
+    # 片方がもう片方をキャンセルするのを避けるため30分ずらしている。
+    - cron: "30 20 * * *"
   workflow_dispatch:
 
 # 最小権限。build.ymlと同じ（配信ジョブでのみpages/id-tokenを使う）。
@@ -18,9 +21,11 @@ permissions:
   id-token: write
 
 # build.ymlの配信ジョブと競合しないよう同じグループにする。
+# cancel-in-progress: false ＝ 走っている配信を横から止めずに順番待ちする
+# （途中でキャンセルすると out/ が片方だけ配信された状態になりかねない）。
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   canary:
@@ -69,7 +74,10 @@ jobs:
           path: out
 
   deploy:
-    needs: build
+    # ⚠️ needs に canary を必ず含める。GitHub Actions の needs コンテキストは
+    # 「直接の依存ジョブ」しか入らないため、needs: build だけにすると
+    # needs.canary.outputs.changed が空になり、この if が永久に偽＝配信されない。
+    needs: [canary, build]
     if: needs.canary.outputs.changed == 'true'
     runs-on: ubuntu-latest
     environment:
