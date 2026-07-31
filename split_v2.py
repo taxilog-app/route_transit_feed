@@ -48,6 +48,14 @@ SOURCES = [
 _UNSAFE = '/\\:*?"<>|'
 
 
+# GitHubの実行環境は世界標準時(UTC)で動くため、time.strftime に "+09:00" を
+# 付けただけでは **9時間古い日本時刻** が記録される（2026-08-01 に判明）。
+# 日本時刻を明示して作る。
+def jst_now_iso():
+    from datetime import datetime, timedelta, timezone
+    return datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%S+09:00")
+
+
 def safe_name(name: str) -> str:
     s = "".join("_" if c in _UNSAFE else c for c in name).strip()
     return s or "_"
@@ -87,7 +95,7 @@ def split_one(src):
     for old in os.listdir(st_dir):
         os.remove(os.path.join(st_dir, old))
 
-    generated_at = data.get("generated_at") or time.strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    generated_at = data.get("generated_at") or jst_now_iso()
     index_stations = []
     used = {}
     total_bytes = 0
@@ -179,7 +187,7 @@ def main():
     with open(os.path.join(V2, "index.json"), "w", encoding="utf-8") as f:
         json.dump({
             "version": 2,
-            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            "generated_at": jst_now_iso(),
             "cities": cities,
         }, f, ensure_ascii=False, separators=(",", ":"))
     print(f"📝 out/v2/index.json（{len(cities)}都市）")

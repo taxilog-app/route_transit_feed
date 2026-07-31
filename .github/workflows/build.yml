@@ -7,8 +7,10 @@ on:
   schedule:
     - cron: "0 20 1 * *"
   workflow_dispatch:
-  push:
-    branches: [main]
+# ⚠️ push では起動しない（2026-08-01 に外した）。
+#    コードを直して送るたびに福岡の全取得(29分)が走り、しかも下の concurrency で
+#    **走っている都市の取得を巻き添えで止めていた**（札幌が実際に消えた）。
+#    データを作り直したい時は「Actions → build-and-deploy → Run workflow」で手動起動する。
 
 # 最小権限。Secrets・書き込みトークンは使わない（公式Excel取得とPages配信のみ）。
 permissions:
@@ -18,7 +20,9 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # 走っている配信・都市の取得を横取りして止めない（順番待ちにする）。
+  # true だと、あとから入ったこちらが実行中の取得を巻き添えで殺す。
+  cancel-in-progress: false
 
 jobs:
   build:

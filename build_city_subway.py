@@ -12,7 +12,7 @@
 
 出力: out/<slug>_subway_timetable.json（train_timetable.json と同じスキーマ）
 """
-import json, os, sys, time, urllib.request
+import json, os, re, sys, time, urllib.request
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 import build_train as bt  # fetch/find_station_id/get_lines_at_station/get_timetable/scrape_all を再利用
@@ -139,6 +139,19 @@ def overpass_stations(cfg):
     return list(seen.values())
 
 
+# GitHubの実行環境は世界標準時(UTC)で動くため、time.strftime に "+09:00" を
+# 付けただけでは **9時間古い日本時刻** が記録される（2026-08-01 に判明）。
+# 日本時刻を明示して作る。
+def jst_now_iso():
+    from datetime import datetime, timedelta, timezone
+    return datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%S+09:00")
+
+
+def _search_name(name):
+    """Yahooで検索する時の駅名（副題〈…〉や（…）を落とした形）。"""
+    return re.sub(r"[〈（(].*?[〉）)]", "", name).strip() or name
+
+
 def check_station_count(slug):
     """Yahooには行かず、OSMの駅数だけを目安と突き合わせる（--count 専用）。"""
     cfg = CONFIGS[slug]
@@ -175,7 +188,11 @@ def main():
 
     for s in stations:
         s["lines"] = list(cfg["line_patterns"].keys())
-        s["search"] = f'{s["name"]} {cfg["search_suffix"]}'
+        # 検索語からは駅名の副題を外す。OSMは「押上〈スカイツリー前〉」
+        # 「明治神宮前〈原宿〉」のように〈〉付きで持っているが、Yahooの検索では
+        # そのままだと1件も当たらない（2026-08-01 東京で3駅取りこぼした）。
+        # 出力する駅名は〈〉付きのまま＝画面表記は変えない。
+        s["search"] = f'{_search_name(s["name"])} {cfg["search_suffix"]}'
     os.makedirs("targets", exist_ok=True)
     json.dump({"city": cfg["city"], "stations": stations},
               open(f'targets/{cfg["slug"]}_subway.json', "w", encoding="utf-8"),
@@ -186,14 +203,22 @@ def main():
     result, failed = bt.scrape_all(stations)
     print(f"成功 {len(result)}駅 / 失敗 {len(failed)}件")
 
-    # 取得に失敗した駅数が目安の8割を切ったら配信しない（既存の下限ガードと同じ考え方）。
-    if len(result) < cfg["expected_stations"] * 0.8:
-        print(f"[GUARD] 成功 {len(result)}駅 < 目安の8割 → 出力しない(異常)", file=sys.stderr)
+    # 取得できた駅が「実際に狙った駅数」の8割を切ったら配信しない（取得崩れの検知）。
+    #
+    # ⚠️ 目安(expected_stations)ではなく **狙った駅数(len(stations))** と比べる。
+    #    OSMの範囲には地下鉄以外の駅（東京ならりんかい線・京急・東急）も混ざり、
+    #    それらは路線パターンに一致しないので必ず失敗する。東京は227駅中20駅が
+    #    これに当たり、目安280の8割(224駅)には**正常に取れても構造的に届かない**
+    #    ＝ 2026-08-01 に東京の取得がここで止まった（実データは正常だった）。
+    floor = int(len(stations) * 0.8)
+    if len(result) < floor:
+        print(f"[GUARD] 成功 {len(result)}駅 < 対象{len(stations)}駅の8割({floor}) "
+              "→ 出力しない(異常)", file=sys.stderr)
         if failed:
             print("失敗:", failed[:20])
         sys.exit(1)
 
-    data = {"version": 1, "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+    data = {"version": 1, "generated_at": jst_now_iso(),
             "source": "https://transit.yahoo.co.jp/timetable/",
             "attribution": cfg["attribution"], "city": cfg["city"], "stations": result}
     os.makedirs("out", exist_ok=True)

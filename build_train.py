@@ -68,7 +68,9 @@ def find_station_ids(name: str, query=None):
         return [m.group(1)]
     matches = re.findall(
         r'href="/timetable/(\d+)(?:\?[^"]*)?"[^>]*>\s*([^<]+?)\s*</a>', html)
-    norm = re.sub(r'[（(].*?[）)]', '', name).strip()
+    # 副題は〈〉付きでも来る（押上〈スカイツリー前〉/明治神宮前〈原宿〉）。
+    # Yahooの表示は副題なしなので、照合用に落としておく。
+    norm = re.sub(r'[〈（(].*?[〉）)]', '', name).strip()
     seen, cands = set(), []
     for sid, label in matches:
         if sid in seen:
@@ -244,7 +246,7 @@ def main():
               file=sys.stderr)
         sys.exit(1)
 
-    gen = prev_generated_at(stations) or time.strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    gen = prev_generated_at(stations) or jst_now_iso()
     data = {
         "version": 1,
         "generated_at": gen,
