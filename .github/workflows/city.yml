@@ -3,7 +3,12 @@ name: build-city
 # 都市を1つ選んで時刻表を作り直し、棚へ配る（手動専用）。
 # 大阪・札幌・名古屋・東京のような「福岡以外の都市」はダイヤ改正の時にだけ
 # 作り直せばよいので、毎月の自動更新(build.yml)には入れていない。
-# 選ばなかった都市は carry_over.py が公開中の棚から回収するので消えない。
+#
+# 【複数都市を同時に流してよい作り】
+# 取得(build)は都市ごとに並行して走らせ、**配信(publish)だけを1本ずつ**にする。
+# 棚は「今回アップしたもので丸ごと置き換わる」ため、配信まで並行にすると
+# 後から終わった都市が先の都市を消してしまう。ここを job 単位の concurrency で
+# 直列化し、さらに配信時に他都市を「成果物(artifact)→棚」の順で回収する。
 on:
   workflow_dispatch:
     inputs:
@@ -17,16 +22,12 @@ permissions:
   contents: read
   pages: write
   id-token: write
-
-# build.yml / canary.yml の配信と競合させない（順番待ちにする）。
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  actions: read # 他都市の成果物(artifact)を取り出すため
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # 東京は約290駅ぶんをYahooから2秒間隔で取るため長時間かかる（既定6時間では
+    # 東京は約230駅ぶんをYahooから2秒間隔で取るため長時間かかる（既定6時間では
     # 足りない可能性があるので明示的に上限を伸ばす）。
     timeout-minutes: 350
     steps:
@@ -39,18 +40,57 @@ jobs:
       # 駅数が目安から外れたら build_city_subway.py 自身が非0で止まる
       # → 配信ジョブに進まず、棚は前回のまま温存される。
       - run: python build_city_subway.py ${{ inputs.city }}
-      - run: python carry_over.py             # 他都市を棚から回収（消さないため）
-      - run: python split_v2.py               # 索引＋駅ごとに小分け（v2）
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
+      # 取れた1本ものを成果物として残す。他都市の配信ジョブがこれを回収するので、
+      # 「棚に反映される前に次の都市が配信して消す」事故が起きない。
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
-          path: out
+          name: city-${{ inputs.city }}
+          path: out/${{ inputs.city }}_subway_timetable.json
+          retention-days: 90
+          if-no-files-found: error
 
-  deploy:
+  publish:
     needs: build
     runs-on: ubuntu-latest
+    # 棚の更新は必ず1本ずつ（build.yml / canary.yml と同じ group 名で待ち合わせる）。
+    # cancel-in-progress: false ＝ 走っている配信を横から止めずに順番待ちする。
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      # 今回作った都市
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: city-${{ inputs.city }}
+          path: out
+      # 他都市は「直近の成果物」を先に回収する。棚(Pages)は配信直後に少し遅れて
+      # 反映されることがあり、そこだけ見ると同時進行の都市を取りこぼすため。
+      # 成果物が無い都市はここでは何も起きず、次の carry_over.py が棚から拾う。
+      - name: 他都市の直近の成果物を回収
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for c in osaka sapporo nagoya tokyo; do
+            [ "$c" = "${{ inputs.city }}" ] && continue
+            gh run download -n "city-$c" -D out 2>/dev/null \
+              && echo "  ↓ $c: 直近の成果物から回収" \
+              || echo "  – $c: 成果物なし（棚から拾う）"
+          done
+      - run: python carry_over.py   # 残りを公開中の棚から回収（消さないため）
+      - run: python split_v2.py     # 索引＋駅ごとに小分け（v2）
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
+        with:
+          path: out
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4.0.5
+      # 配信直後は棚の反映に少し時間がかかる。順番待ちの次の都市が
+      # 古い棚を見て取りこぼさないよう、鍵を離す前に少し待つ。
+      - run: sleep 90
