@@ -74,6 +74,103 @@ CONFIGS = {
         "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
         "expected_stations": 280,
     },
+    # ── ここから 2026-08-01 追加の4都市（地下鉄＋主要ターミナル駅）──
+    # 路線名は「推測で書かない」（指示書C §2.2）。下の表記はすべて
+    # 代表駅1駅をYahooに当てて実際に返ってきた文字列から起こしている。
+    #   🔴 JRは半角 "JR" ではなく **全角「ＪＲ」**（ＪＲ京都線／ＪＲ神戸線…）。
+    #      半角で書くと1路線も一致しない。
+    "kyoto": {
+        "city": "京都市",
+        "slug": "kyoto",
+        "overpass_area": "京都市",
+        "overpass_admin_level": "7",
+        # 実測（烏丸御池）: 京都市営地下鉄烏丸線／京都市営地下鉄東西線
+        # 実測（京都）: ＪＲ京都線・ＪＲ奈良線・ＪＲ嵯峨野線・ＪＲ湖西線・
+        #               ＪＲ琵琶湖線・ＪＲ東海道新幹線・近鉄京都線／阪急京都本線
+        "line_patterns": {
+            "subway": [r"京都市営地下鉄"],
+            "jr": [r"ＪＲ"],
+            "private": [r"近鉄", r"阪急", r"京阪", r"叡山電鉄", r"嵐電", r"京福"],
+        },
+        "terminals": [
+            "京都", "山科", "二条", "円町", "丹波口", "桂", "桂川", "西院",
+            "京都河原町", "烏丸", "大宮", "出町柳", "三条", "東福寺",
+            "伏見稲荷", "嵯峨嵐山", "丹波橋", "中書島", "六地蔵",
+        ],
+        "search_suffix": "京都",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 30,  # 実測30（六地蔵は宇治市なので京都市域に入らない）
+    },
+    "kobe": {
+        "city": "神戸市",
+        "slug": "kobe",
+        "overpass_area": "神戸市",
+        "overpass_admin_level": "7",
+        # 実測（三宮・花時計前）: 神戸市営地下鉄海岸線／（三ノ宮）: ＪＲ神戸線
+        "line_patterns": {
+            "subway": [r"神戸市営地下鉄", r"神戸市営北神線"],
+            "jr": [r"ＪＲ"],
+            "private": [r"阪急", r"阪神", r"山陽電鉄", r"神戸電鉄", r"神戸高速",
+                        r"ポートライナー", r"ポートアイランド", r"六甲ライナー"],
+        },
+        "terminals": [
+            "三ノ宮", "神戸三宮", "元町", "神戸", "新神戸", "六甲道", "灘",
+            "兵庫", "須磨", "舞子", "板宿", "新開地", "高速神戸", "湊川",
+            "谷上", "鈴蘭台", "垂水", "住吉", "西神中央",
+        ],
+        "search_suffix": "神戸",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 27,  # 実測27（西神・山手線＋海岸線＋北神線の谷上）
+    },
+    "yokohama": {
+        "city": "横浜市",
+        "slug": "yokohama",
+        "overpass_area": "横浜市",
+        "overpass_admin_level": "7",
+        # 実測（関内）: 横浜市営地下鉄ブルーライン／ＪＲ根岸線
+        # 実測（横浜）: みなとみらい線・京急本線・東急東横線・相鉄本線・ＪＲ各線
+        "line_patterns": {
+            "subway": [r"横浜市営地下鉄"],
+            "jr": [r"ＪＲ"],
+            "private": [r"京急", r"京浜急行", r"東急", r"相鉄", r"みなとみらい線",
+                        r"横浜シーサイドライン", r"金沢シーサイドライン"],
+        },
+        "terminals": [
+            "横浜", "新横浜", "桜木町", "関内", "石川町", "東神奈川", "鶴見",
+            "戸塚", "上大岡", "日吉", "菊名", "二俣川", "元町・中華街",
+            "みなとみらい", "金沢文庫", "保土ケ谷", "港南台", "綱島", "新杉田",
+        ],
+        "search_suffix": "横浜",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 39,  # 実測39（湘南台は藤沢市。共有駅を除いた横浜市域の数）
+    },
+    # 🔴 北九州には地下鉄が無い。主役はモノレール（13駅）なので、OSMから
+    #    拾う時のタグも subway ではなく monorail にする（overpass_filters）。
+    "kitakyushu": {
+        "city": "北九州市",
+        "slug": "kitakyushu",
+        "overpass_area": "北九州市",
+        "overpass_admin_level": "7",
+        "overpass_filters": [
+            '["railway"="station"]["station"="monorail"]',
+            '["railway"="station"]["monorail"="yes"]',
+        ],
+        # 実測（小倉）: 北九州モノレール小倉線・ＪＲ山陽新幹線・ＪＲ鹿児島本線・
+        #               ＪＲ日豊本線・ＪＲ日田彦山線
+        "line_patterns": {
+            "monorail": [r"北九州モノレール"],
+            "jr": [r"ＪＲ"],
+            "private": [r"筑豊電気鉄道", r"平成筑豊鉄道"],
+        },
+        "terminals": [
+            "小倉", "西小倉", "戸畑", "八幡", "黒崎", "折尾", "門司", "門司港",
+            "城野", "下曽根", "スペースワールド", "九州工大前", "若松", "二島",
+            "朽網", "小森江", "陣原", "南小倉",
+        ],
+        "search_suffix": "北九州",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 13,  # 北九州モノレール小倉線
+    },
 }
 
 
@@ -107,9 +204,18 @@ def _overpass_query(q):
     return d
 
 
-def overpass_stations(cfg):
+# 既定の拾い方＝地下鉄の駅。北九州のようにモノレールが主役の都市は
+# cfg["overpass_filters"] で差し替える。
+_DEFAULT_FILTERS = [
+    '["railway"="station"]["station"="subway"]',
+    '["railway"="station"]["subway"="yes"]',
+]
+
+
+def _overpass_collect(cfg, filters):
     """cfg["overpass_area"]（単一市区町村）または cfg["overpass_wards"]
-    （東京23区のように単一領域が無い都市向け・区名のOR検索）から駅を取る。"""
+    （東京23区のように単一領域が無い都市向け・区名のOR検索）の範囲で、
+    [filters] のいずれかに当たる駅ノードを取る。"""
     level = cfg.get("overpass_admin_level", "7")
     wards = cfg.get("overpass_wards")
     if wards:
@@ -118,17 +224,15 @@ def overpass_stations(cfg):
             for i, w in enumerate(wards)
         )
         node_defs = "".join(
-            f'node(area.a{i})["railway"="station"]["station"="subway"];'
-            f'node(area.a{i})["railway"="station"]["subway"="yes"];'
-            for i in range(len(wards))
+            f'node(area.a{i}){f};' for i in range(len(wards)) for f in filters
         )
         q = f'[out:json][timeout:90];{area_defs}({node_defs});out;'
     else:
         area = cfg["overpass_area"]
+        node_defs = "".join(f'node(area.a){f};' for f in filters)
         q = ('[out:json][timeout:60];'
              f'area["name"="{area}"]["admin_level"="{level}"]->.a;'
-             '(node(area.a)["railway"="station"]["station"="subway"];'
-             ' node(area.a)["railway"="station"]["subway"="yes"];);out;')
+             f'({node_defs});out;')
     d = _overpass_query(q)
     seen = {}
     for e in d.get("elements", []):
@@ -137,6 +241,28 @@ def overpass_stations(cfg):
             seen[nm] = {"name": nm, "city": cfg["city"],
                         "lat": round(e["lat"], 5), "lng": round(e["lon"], 5)}
     return list(seen.values())
+
+
+def overpass_stations(cfg):
+    """その都市の主役の駅（既定＝地下鉄／北九州＝モノレール）。"""
+    return _overpass_collect(cfg, cfg.get("overpass_filters", _DEFAULT_FILTERS))
+
+
+def overpass_terminals(cfg):
+    """cfg["terminals"] に挙げた主要ターミナル駅の座標を、同じ市域の
+    「鉄道駅ぜんぶ」から名前で拾う（JR・私鉄はタグが路線ごとに違うため、
+    種類で絞らず名前で当てる方が確実）。
+
+    見つからなかった名前は戻り値の2つ目に返す。**黙って減らさない**
+    （市外の駅を書いた／表記違い、をその場で気づけるようにするため）。"""
+    names = cfg.get("terminals") or []
+    if not names:
+        return [], []
+    allst = _overpass_collect(cfg, ['["railway"="station"]'])
+    by_name = {s["name"]: s for s in allst}
+    found = [by_name[n] for n in names if n in by_name]
+    missing = [n for n in names if n not in by_name]
+    return found, missing
 
 
 # GitHubの実行環境は世界標準時(UTC)で動くため、time.strftime に "+09:00" を
@@ -186,7 +312,20 @@ def main():
               file=sys.stderr)
         sys.exit(1)
 
+    # 主要ターミナル駅（JR・私鉄）を足す（社長指示 2026-08-01）。
+    # 地下鉄駅と同名のものは足さない（重複させない）。
+    if cfg.get("terminals"):
+        term, missing = overpass_terminals(cfg)
+        have = {s["name"] for s in stations}
+        added = [t for t in term if t["name"] not in have]
+        stations = stations + added
+        print(f'  ターミナル駅: 追加 {len(added)}駅 / 指定 {len(cfg["terminals"])}駅'
+              + (f' / OSMに見つからず {missing}' if missing else ""))
+
     for s in stations:
+        # どの駅にも都市の全路線キーを渡す。地下鉄駅にJRが乗り入れていれば
+        # そのJRも一緒に取れる（＝ターミナルの狙いがそのまま満たせる）。
+        # 乗り入れが無ければ一致しないだけで、余計な取得は起きない。
         s["lines"] = list(cfg["line_patterns"].keys())
         # 検索語からは駅名の副題を外す。OSMは「押上〈スカイツリー前〉」
         # 「明治神宮前〈原宿〉」のように〈〉付きで持っているが、Yahooの検索では
@@ -197,7 +336,7 @@ def main():
     json.dump({"city": cfg["city"], "stations": stations},
               open(f'targets/{cfg["slug"]}_subway.json', "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
-    print(f'{cfg["city"]} 地下鉄 対象 {len(stations)}駅（OSM）')
+    print(f'{cfg["city"]} 対象 {len(stations)}駅（OSM・地下鉄/モノレール＋ターミナル）')
 
     bt.LINE_PATTERNS = cfg["line_patterns"]          # 都市の路線パターンに差し替え
     result, failed = bt.scrape_all(stations)

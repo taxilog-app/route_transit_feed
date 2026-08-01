@@ -16,7 +16,7 @@ on:
         description: 作り直す都市
         required: true
         type: choice
-        options: [osaka, sapporo, nagoya, tokyo]
+        options: [osaka, sapporo, nagoya, tokyo, kyoto, kobe, yokohama, kitakyushu]
 
 permissions:
   contents: read
@@ -78,7 +78,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for c in osaka sapporo nagoya tokyo; do
+          for c in osaka sapporo nagoya tokyo kyoto kobe yokohama kitakyushu; do
             [ "$c" = "${{ inputs.city }}" ] && continue
             gh run download -n "city-$c" -D out 2>/dev/null \
               && echo "  ↓ $c: 直近の成果物から回収" \
