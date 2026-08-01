@@ -100,17 +100,37 @@ def find_station_id(name: str, query=None):
     return ids[0] if ids else None
 
 
-def get_lines_at_station(station_id: str) -> list[dict]:
+def get_station_page(station_id: str) -> tuple[list[dict], str]:
+    """駅ページ1枚から「乗り入れ路線」と「住所」をまとめて取る。
+
+    住所は同名駅の取り違えを弾くために使う（REQUIRE_PREF）。同じページから
+    取るので取得回数は増えない。"""
     html, _ = fetch(f"{BASE}/timetable/{station_id}")
     data = extract_next_data(html)
-    di = data["props"]["pageProps"].get("directionDetail", {}).get("directionItem", {})
+    pp = data["props"]["pageProps"]
+    di = pp.get("directionDetail", {}).get("directionItem", {})
     out = []
     for r in di.get("routeInfos", []):
         rail_name = r.get("railName", "")
         for g in r.get("railGroup", []):
             out.append({"rail_name": rail_name, "direction": g.get("direction", ""),
                         "rail_id": g.get("groupId", "")})
-    return out
+    addr = (pp.get("lipFeature") or {}).get("Address", "") or ""
+    return out, addr
+
+
+def get_lines_at_station(station_id: str) -> list[dict]:
+    return get_station_page(station_id)[0]
+
+
+# 🔴 同名駅よけ（2026-08-01）。都市ビルダーが「この都道府県の駅であること」を
+#    入れると、駅ページの住所が違う県だった候補を捨てる。
+#
+#    実害：京都の「桂川」を取りに行って **福岡県嘉穂郡桂川町の桂川駅** を掴んだ
+#    （ＪＲ原田線・福北ゆたか線が京都の時刻表に混ざった）。地下鉄だけを見ていた
+#    頃は路線名（京都市営地下鉄…）が壁になっていたが、ターミナル駅のために
+#    「ＪＲ」という広い網を入れた途端、全国の同名駅が通ってしまう。
+REQUIRE_PREF = ""
 
 
 def get_timetable(station_id: str, rail_id: str, kind: int) -> dict:
@@ -180,10 +200,15 @@ def scrape_all(stations) -> tuple[dict, list]:
         matched, seen_rail = [], set()
         for cid in candidate_ids[:3]:
             try:
-                lines = get_lines_at_station(cid)
+                lines, addr = get_station_page(cid)
                 time.sleep(THROTTLE)
             except Exception as e:
                 failed.append((name, f"lines_{cid}", str(e)))
+                continue
+            # 住所が別の都道府県なら、同名の別の駅＝この候補は捨てる。
+            # 住所が読めない時は捨てない（読めないこと自体は異常ではない）。
+            if REQUIRE_PREF and addr and not addr.startswith(REQUIRE_PREF):
+                failed.append((name, f"wrong_pref_{cid}", addr[:20]))
                 continue
             cand_matched, cand_seen_rail = [], set()
             for line in lines:

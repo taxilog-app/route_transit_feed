@@ -25,6 +25,7 @@ import build_train as bt  # fetch/find_station_id/get_lines_at_station/get_timet
 #   範囲指定を疑うためのガード（指示書C §2.2）。
 CONFIGS = {
     "sapporo": {
+        "pref": "北海道",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "札幌市",
         "slug": "sapporo",
         "overpass_area": "札幌市",
@@ -35,6 +36,7 @@ CONFIGS = {
         "expected_stations": 46,
     },
     "osaka": {
+        "pref": "大阪府",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "大阪市",
         "slug": "osaka",
         "overpass_area": "大阪市",
@@ -47,6 +49,7 @@ CONFIGS = {
         "expected_stations": 100,
     },
     "nagoya": {
+        "pref": "愛知県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "名古屋市",
         "slug": "nagoya",
         "overpass_area": "名古屋市",
@@ -60,6 +63,7 @@ CONFIGS = {
     # それぞれ市町村相当=admin_level7）。23区名を列挙してOR検索する。
     # ⚠️ 駅数目安280はここから大きく外れやすい＝必ず --count で先に確認すること。
     "tokyo": {
+        "pref": "東京都",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "東京都",
         "slug": "tokyo",
         "overpass_wards": [
@@ -80,6 +84,7 @@ CONFIGS = {
     #   🔴 JRは半角 "JR" ではなく **全角「ＪＲ」**（ＪＲ京都線／ＪＲ神戸線…）。
     #      半角で書くと1路線も一致しない。
     "kyoto": {
+        "pref": "京都府",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "京都市",
         "slug": "kyoto",
         "overpass_area": "京都市",
@@ -102,6 +107,7 @@ CONFIGS = {
         "expected_stations": 30,  # 実測30（六地蔵は宇治市なので京都市域に入らない）
     },
     "kobe": {
+        "pref": "兵庫県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "神戸市",
         "slug": "kobe",
         "overpass_area": "神戸市",
@@ -123,6 +129,7 @@ CONFIGS = {
         "expected_stations": 27,  # 実測27（西神・山手線＋海岸線＋北神線の谷上）
     },
     "yokohama": {
+        "pref": "神奈川県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "横浜市",
         "slug": "yokohama",
         "overpass_area": "横浜市",
@@ -147,6 +154,7 @@ CONFIGS = {
     # 🔴 北九州には地下鉄が無い。主役はモノレール（13駅）なので、OSMから
     #    拾う時のタグも subway ではなく monorail にする（overpass_filters）。
     "kitakyushu": {
+        "pref": "福岡県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
         "city": "北九州市",
         "slug": "kitakyushu",
         "overpass_area": "北九州市",
@@ -342,6 +350,7 @@ def main():
     print(f'{cfg["city"]} 対象 {len(stations)}駅（OSM・地下鉄/モノレール＋ターミナル）')
 
     bt.LINE_PATTERNS = cfg["line_patterns"]          # 都市の路線パターンに差し替え
+    bt.REQUIRE_PREF = cfg.get("pref", "")            # 同名の別県の駅を掴まないための壁
     result, failed = bt.scrape_all(stations)
     print(f"成功 {len(result)}駅 / 失敗 {len(failed)}件")
 
