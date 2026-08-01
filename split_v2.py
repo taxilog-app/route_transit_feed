@@ -36,12 +36,21 @@ V2 = os.path.join(OUT, "v2")
 # 小分けの対象＝RailSchedule形式（train_timetable.json と同じ形）のフィード。
 # 福岡市地下鉄(subway_timetable.json)は形式が別で0.36MBと軽いため対象外
 # （小分けしても得が無く、アプリの別の器で読んでいるため触らない）。
+# 🔴 都市の一覧をここに直書きしない（2026-08-01）。
+#    実害：京都を足して工場は正しく作れたのに、**この一覧が5都市のままだった
+#    ため配られず**、棚に載らなかった。CONFIGS（build_city_subway.py）が
+#    唯一の名簿になるよう、そこから組み立てる。都市を足す時に触るのは
+#    CONFIGS と city.yml だけでよくなる。
+from build_city_subway import CONFIGS as _CITY_CONFIGS  # noqa: E402
+
 SOURCES = [
+    # 福岡だけは形式の出どころが別（JR・西鉄を build_train.py が作る）。
     {"slug": "fukuoka", "file": "train_timetable.json", "label": "福岡（JR・西鉄）"},
-    {"slug": "osaka", "file": "osaka_subway_timetable.json", "label": "大阪（地下鉄）"},
-    {"slug": "sapporo", "file": "sapporo_subway_timetable.json", "label": "札幌（地下鉄）"},
-    {"slug": "nagoya", "file": "nagoya_subway_timetable.json", "label": "名古屋（地下鉄）"},
-    {"slug": "tokyo", "file": "tokyo_subway_timetable.json", "label": "東京（地下鉄）"},
+] + [
+    {"slug": slug,
+     "file": f"{slug}_subway_timetable.json",
+     "label": cfg.get("feed_label", cfg["city"])}
+    for slug, cfg in _CITY_CONFIGS.items()
 ]
 
 # ファイル名に使えない文字（Windows/Pagesの両方で安全な範囲に寄せる）。

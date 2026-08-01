@@ -24,14 +24,14 @@ PAGES = "https://taxilog-app.github.io/route_transit_feed"
 UA = "route-timer-app feed builder (taxilog-app) carry_over.py"
 
 # 棚に並んでいるべき1本もの（v1）。ここに無い都市は持ち越し対象外。
+# 🔴 都市名を直書きしない。名簿は CONFIGS（build_city_subway.py）ひとつ。
+#    ここが古いと、その都市は「棚から拾い直されない」＝配信のたびに消える。
+from build_city_subway import CONFIGS as _CITY_CONFIGS  # noqa: E402
+
 FILES = [
     "subway_timetable.json",          # 福岡市地下鉄（公式Excel）
     "train_timetable.json",           # 福岡 JR・西鉄
-    "osaka_subway_timetable.json",
-    "sapporo_subway_timetable.json",
-    "nagoya_subway_timetable.json",
-    "tokyo_subway_timetable.json",
-]
+] + [f"{slug}_subway_timetable.json" for slug in _CITY_CONFIGS]
 
 # 最低限これだけは棚に無いと異常（＝配信中止）。
 # 新しい都市を足したばかりの回は「まだ棚に無い」が正常なので、必須には入れない。
