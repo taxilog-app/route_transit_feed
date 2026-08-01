@@ -258,7 +258,10 @@ def overpass_terminals(cfg):
     names = cfg.get("terminals") or []
     if not names:
         return [], []
-    allst = _overpass_collect(cfg, ['["railway"="station"]'])
+    # 市内の駅を全部引くと重く、Overpassが504を返しがち（京都で実測）。
+    # 欲しい名前だけに絞って問い合わせる。
+    esc = "|".join(re.escape(n) for n in names)
+    allst = _overpass_collect(cfg, [f'["railway"="station"]["name"~"^({esc})$"]'])
     by_name = {s["name"]: s for s in allst}
     found = [by_name[n] for n in names if n in by_name]
     missing = [n for n in names if n not in by_name]
