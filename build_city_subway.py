@@ -267,12 +267,29 @@ def overpass_terminals(cfg):
     if not names:
         return [], []
     # 市内の駅を全部引くと重く、Overpassが504を返しがち（京都で実測）。
-    # 欲しい名前だけに絞って問い合わせる。
-    esc = "|".join(re.escape(n) for n in names)
-    allst = _overpass_collect(cfg, [f'["railway"="station"]["name"~"^({esc})$"]'])
-    by_name = {s["name"]: s for s in allst}
-    found = [by_name[n] for n in names if n in by_name]
-    missing = [n for n in names if n not in by_name]
+    # 欲しい名前だけに絞って問い合わせる。**大小のカナのゆれ**（ケ/ヶ・ツ/ッ）は
+    # 正規表現の側で両方許す＝OSMが「保土ヶ谷」、正式表記が「保土ケ谷」でも当たる。
+    def pat(n):
+        return "".join(
+            "[ケヶ]" if c in "ケヶ" else
+            "[ツッ]" if c in "ツッ" else re.escape(c)
+            for c in n
+        )
+    allst = _overpass_collect(
+        cfg, [f'["railway"="station"]["name"~"^({"|".join(pat(n) for n in names)})$"]'])
+
+    # 照合はゆれを潰した形で行い、**出す名前は設定に書いた正式表記**にする
+    # （Yahooの検索も画面表示もこちらの方が当たりが良い）。座標はOSMのものを使う。
+    def norm(s):
+        return s.replace("ヶ", "ケ").replace("ッ", "ツ")
+    by_norm = {norm(s["name"]): s for s in allst}
+    found, missing = [], []
+    for n in names:
+        hit = by_norm.get(norm(n))
+        if hit:
+            found.append({**hit, "name": n})
+        else:
+            missing.append(n)
     return found, missing
 
 
