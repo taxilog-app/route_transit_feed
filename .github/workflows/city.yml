@@ -13,10 +13,15 @@ on:
   workflow_dispatch:
     inputs:
       city:
-        description: 作り直す都市
+        # 🔴 選択式(type: choice)はGitHubの仕様で **選択肢10個まで**。2026-08-03に
+        #    政令市を足して17都市になり上限を超えたため、自由入力に変えた。
+        #    打ち間違いは build_city_subway.py が「使い方」を出して非0で止まるので
+        #    素通りはしない（棚は前回のまま温存される）。
+        description: >-
+          作り直す都市（osaka sapporo nagoya tokyo kyoto kobe yokohama kitakyushu
+          sendai hiroshima okayama niigata saitama chiba shizuoka kumamoto sagami）
         required: true
-        type: choice
-        options: [osaka, sapporo, nagoya, tokyo, kyoto, kobe, yokohama, kitakyushu]
+        type: string
 
 permissions:
   contents: read
@@ -78,7 +83,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for c in osaka sapporo nagoya tokyo kyoto kobe yokohama kitakyushu; do
+          # 🔴 都市の名簿をここに直書きしない。書き忘れた都市は「配信のたびに
+          #    棚から消える」形で後から効いてくる（2026-08-01 に京都で実害）。
+          #    CONFIGS を唯一の出所にする。
+          for c in $(python -c "from build_city_subway import CONFIGS; print(' '.join(CONFIGS))"); do
             [ "$c" = "${{ inputs.city }}" ] && continue
             gh run download -n "city-$c" -D out 2>/dev/null \
               && echo "  ↓ $c: 直近の成果物から回収" \
