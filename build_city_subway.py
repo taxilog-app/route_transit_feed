@@ -493,6 +493,234 @@ CONFIGS = {
         #  取得そのものが止まってしまうので、ここは緩めて後段の8割ガードに任せる）。
         "expected_stations": 0,
     },
+    # ── ここから 2026-08-04 追加：政令市の次の8営業圏 ──
+    # いずれも町の枠（丁目境界）が既にある営業圏なので、枠づくりは不要。
+    # 🔴 複数の市区町村を並べる時は必ず overpass_parent（都道府県）を付ける。
+    #    「府中市」は東京都と広島県、「一宮」は愛知と香川にあり、名前だけで引くと
+    #    別の県のものが黙って混ざる。
+    "tama": {
+        "feed_label": "多摩（多摩モノレール・JR・私鉄）",  # 棚の索引に出す名前
+        "pref": "東京都",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "多摩地区",
+        "slug": "tama",
+        # 多摩地区＝東京都から23区・武蔵野市・三鷹市を除いた市町村。
+        # 主要な市だけを挙げる（モノレール＋ターミナル駅が取れれば足りる）。
+        "overpass_parent": "東京都",
+        "overpass_wards": [
+            "八王子市", "立川市", "町田市", "府中市", "調布市", "多摩市",
+            "日野市", "東大和市", "武蔵村山市", "国立市", "国分寺市", "小平市",
+            "西東京市", "小金井市", "昭島市", "青梅市", "福生市", "稲城市",
+            "東村山市", "狛江市",
+        ],
+        "overpass_admin_level": "7",
+        "overpass_filters": [
+            '["railway"="station"]["station"="monorail"]',
+            '["railway"="station"]["monorail"="yes"]',
+        ],
+        # 実測（多摩センター）: 多摩モノレール／（八王子）: ＪＲ中央線快速・八高線・
+        #   横浜線／（町田）: 小田急小田原線／（調布）: 京王線・京王相模原線
+        "line_patterns": {
+            "monorail": [r"多摩モノレール"],
+            "jr": [r"ＪＲ"],
+            "private": [r"京王", r"小田急", r"西武", r"東急"],
+        },
+        "terminals": [
+            "八王子", "京王八王子", "西八王子", "高尾", "北野", "めじろ台",
+            "立川", "国立", "国分寺", "西国分寺", "武蔵小金井", "東小金井",
+            "町田", "府中", "分倍河原", "調布", "つつじヶ丘",
+            "聖蹟桜ヶ丘", "高幡不動", "日野", "豊田", "多摩センター",
+            # ⚠️「永山」という駅は無い。京王永山と小田急永山（どちらも多摩市）。
+            #    「若葉台」は川崎市麻生区＝神奈川県なので多摩地区に入れない。
+            "京王永山", "小田急永山",
+            "稲城", "拝島", "昭島", "青梅", "福生", "田無",
+            "ひばりヶ丘", "東村山", "久米川", "小平", "狛江",
+        ],
+        "search_suffix": "東京",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 19,  # 多摩モノレール（上北台〜多摩センター）
+    },
+    # 🔴 宇都宮の主役は2023年開業の **宇都宮ライトレール**（路面電車あつかい）。
+    "tochigi": {
+        "feed_label": "栃木（宇都宮ライトレール・JR・東武）",  # 棚の索引に出す名前
+        "pref": "栃木県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "宇都宮市ほか",
+        "slug": "tochigi",
+        "overpass_parent": "栃木県",
+        # 栃木地区＝栃木県全域の営業圏。ライトレールは宇都宮市＋芳賀町だが、
+        # ターミナル駅は県内の主要市まで広げる（ここを宇都宮市だけにすると
+        # 小山・足利・那須塩原が1駅も取れない＝実測で判明）。
+        "overpass_wards": [
+            "宇都宮市", "芳賀町", "鹿沼市", "栃木市", "小山市", "足利市",
+            "佐野市", "那須塩原市", "矢板市", "さくら市", "下野市", "上三川町",
+        ],
+        "overpass_admin_level": "7",
+        "overpass_filters": ['["railway"="tram_stop"]'],
+        # 実測（宇都宮駅東口）: 宇都宮ライトレール／（宇都宮）: ＪＲ宇都宮線・
+        #   日光線・東北新幹線／（東武宇都宮）: 東武宇都宮線
+        "line_patterns": {
+            "tram": [r"宇都宮ライトレール"],
+            "jr": [r"ＪＲ"],
+            "private": [r"東武", r"野岩鉄道", r"真岡鉄道"],
+        },
+        "terminals": [
+            "宇都宮", "東武宇都宮", "雀宮", "岡本", "鹿沼", "新鹿沼", "栃木",
+            "小山", "足利", "佐野", "那須塩原", "西那須野", "矢板", "氏家",
+            "江曽島", "西川田", "南宇都宮", "石橋", "自治医大",
+        ],
+        "search_suffix": "栃木",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 19,  # 宇都宮ライトレール（宇都宮駅東口〜芳賀・高根沢工業団地）
+    },
+    # 沖縄本島の鉄道は **ゆいレールだけ**（JR・私鉄は無い）。
+    "okinawa": {
+        "feed_label": "沖縄本島（ゆいレール）",  # 棚の索引に出す名前
+        "pref": "沖縄県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "那覇市・浦添市",
+        "slug": "okinawa",
+        "overpass_parent": "沖縄県",
+        "overpass_wards": ["那覇市", "浦添市"],
+        "overpass_admin_level": "7",
+        "overpass_filters": [
+            '["railway"="station"]["station"="monorail"]',
+            '["railway"="station"]["monorail"="yes"]',
+        ],
+        # 実測（那覇空港・首里・おもろまち）: ゆいレール
+        "line_patterns": {"monorail": [r"ゆいレール"]},
+        "search_suffix": "沖縄",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 19,  # ゆいレール（那覇空港〜てだこ浦西）
+    },
+    "hakodate": {
+        "feed_label": "函館（市電・JR）",  # 棚の索引に出す名前
+        "pref": "北海道",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "函館市",
+        "slug": "hakodate",
+        "overpass_parent": "北海道",
+        "overpass_area": "函館市",
+        "overpass_admin_level": "7",
+        "overpass_filters": ['["railway"="tram_stop"]'],
+        # 実測（函館駅前・湯の川）: 函館市電５系統／（五稜郭）: 道南いさりび鉄道・
+        #   ＪＲ函館本線
+        "line_patterns": {
+            "tram": [r"函館市電"],
+            "jr": [r"ＪＲ"],
+            "private": [r"道南いさりび鉄道"],
+        },
+        "terminals": ["函館", "五稜郭", "桔梗"],
+        "search_suffix": "函館",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 26,  # 函館市電の停留場
+    },
+    "kagoshima": {
+        "feed_label": "鹿児島（市電・JR）",  # 棚の索引に出す名前
+        "pref": "鹿児島県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "鹿児島市",
+        "slug": "kagoshima",
+        "overpass_parent": "鹿児島県",
+        "overpass_area": "鹿児島市",
+        "overpass_admin_level": "7",
+        "overpass_filters": ['["railway"="tram_stop"]'],
+        # 実測（鹿児島中央駅前・天文館通）: 鹿児島市電１系統・２系統
+        # 実測（鹿児島中央）: ＪＲ鹿児島本線・日豊本線・指宿枕崎線・九州新幹線
+        "line_patterns": {
+            "tram": [r"鹿児島市電"],
+            "jr": [r"ＪＲ"],
+            "private": [r"肥薩おれんじ鉄道"],
+        },
+        "terminals": [
+            "鹿児島中央", "鹿児島", "谷山", "南鹿児島", "宇宿", "郡元",
+            "慈眼寺", "五位野", "竜ケ水", "上伊集院", "広木", "坂之上",
+        ],
+        "search_suffix": "鹿児島",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 36,  # 鹿児島市電の停留場
+    },
+    "nagasaki": {
+        "feed_label": "長崎（電気軌道・JR）",  # 棚の索引に出す名前
+        "pref": "長崎県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "長崎市",
+        "slug": "nagasaki",
+        "overpass_parent": "長崎県",
+        "overpass_area": "長崎市",
+        "overpass_admin_level": "7",
+        "overpass_filters": ['["railway"="tram_stop"]'],
+        # 実測（長崎駅前・浜町アーケード）: 長崎電気軌道１〜５系統
+        # 実測（長崎）: ＪＲ長崎本線・西九州新幹線／（諫早）: 島原鉄道
+        "line_patterns": {
+            "tram": [r"長崎電気軌道"],
+            "jr": [r"ＪＲ"],
+            "private": [r"島原鉄道", r"松浦鉄道"],
+        },
+        "terminals": ["長崎", "浦上", "西浦上", "道ノ尾", "現川", "肥前古賀"],
+        "search_suffix": "長崎",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 37,  # 長崎電気軌道の停留場
+    },
+    # 奈良は地下鉄・モノレール・路面電車が無い。近鉄とＪＲのターミナル駅で作る。
+    "nara": {
+        "feed_label": "奈良（近鉄・JR）",  # 棚の索引に出す名前
+        "pref": "奈良県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "奈良市ほか",
+        "slug": "nara",
+        "overpass_parent": "奈良県",
+        "overpass_wards": [
+            "奈良市", "大和郡山市", "天理市", "橿原市", "生駒市", "桜井市",
+            "大和高田市", "香芝市", "王寺町", "斑鳩町",
+        ],
+        "overpass_admin_level": "7",
+        # 実測（奈良）: ＪＲ大和路線・奈良線・万葉まほろば線
+        # 実測（近鉄奈良・大和西大寺）: 近鉄奈良線・京都線・橿原線
+        "line_patterns": {
+            "jr": [r"ＪＲ"],
+            "private": [r"近鉄"],
+        },
+        "terminals": [
+            # ⚠️「大和郡山」という駅は無い。ＪＲが「郡山」・近鉄が「近鉄郡山」。
+            "奈良", "近鉄奈良", "新大宮", "大和西大寺", "高の原", "郡山",
+            "近鉄郡山", "天理", "桜井", "大和八木", "八木西口", "橿原神宮前",
+            "生駒", "学園前", "富雄", "王寺", "新王寺", "五位堂", "大和高田",
+            "香芝", "法隆寺",
+        ],
+        "search_suffix": "奈良",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 0,  # 主役の乗り物が無い＝ターミナル駅だけで作る
+    },
+    # 尾張・三河地区＝愛知県から名古屋交通圏を除いた広い営業圏。
+    # 主役は豊橋の路面電車（豊橋鉄道東田本線）。
+    "owari_mikawa": {
+        "feed_label": "尾張・三河（豊鉄市電・名鉄・JR）",  # 棚の索引に出す名前
+        "pref": "愛知県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "豊橋市ほか",
+        "slug": "owari_mikawa",
+        "overpass_parent": "愛知県",
+        "overpass_wards": [
+            "豊橋市", "岡崎市", "一宮市", "豊田市", "春日井市", "豊川市",
+            "安城市", "西尾市", "刈谷市", "小牧市", "稲沢市", "半田市",
+            "大府市", "知多市", "蒲郡市", "江南市", "津島市",
+            "知立市", "東海市",
+        ],
+        "overpass_admin_level": "7",
+        "overpass_filters": ['["railway"="tram_stop"]'],
+        # 実測（駅前・豊橋）: 豊橋鉄道東田本線／名鉄名古屋本線／ＪＲ東海道本線・
+        #   飯田線・東海道新幹線／（岡崎）: 愛知環状鉄道／（豊田市）: 名鉄三河線
+        "line_patterns": {
+            "tram": [r"豊橋鉄道"],
+            "jr": [r"ＪＲ"],
+            "private": [r"名鉄", r"愛知環状鉄道", r"東海交通事業", r"名古屋鉄道"],
+        },
+        "terminals": [
+            "豊橋", "新安城", "岡崎", "東岡崎", "中岡崎", "岡崎公園前",
+            # ⚠️ 愛知に「一宮」という駅は無い。ＪＲが「尾張一宮」・名鉄が「名鉄一宮」
+            #    （素の「一宮」で引くと香川県高松市の一宮駅を掴む＝実測で確認）。
+            "尾張一宮", "名鉄一宮", "豊田市", "新豊田", "知立",
+            "刈谷", "安城", "三河安城", "西尾", "蒲郡", "豊川", "国府",
+            "春日井", "勝川", "高蔵寺", "稲沢", "半田", "大府", "尾張横須賀",
+            "江南", "津島", "小牧",
+        ],
+        "search_suffix": "愛知",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 14,  # 豊橋鉄道東田本線の停留場
+    },
 }
 
 
@@ -537,12 +765,24 @@ _DEFAULT_FILTERS = [
 def _overpass_collect(cfg, filters):
     """cfg["overpass_area"]（単一市区町村）または cfg["overpass_wards"]
     （東京23区のように単一領域が無い都市向け・区名のOR検索）の範囲で、
-    [filters] のいずれかに当たる駅ノードを取る。"""
+    [filters] のいずれかに当たる駅ノードを取る。
+
+    🔴 市区町村は**名前**で引くので、「府中市」「坂町」のように全国に同じ名前が
+    ある自治体は、別の県のものまで黙って混ざる（東京23区で安全だったのは区名が
+    全国で唯一だったから）。cfg["overpass_parent"]（例 "東京都"）を書くと、
+    その都道府県の中の市区町村だけに絞る。**ありふれた名前を wards に入れる時は
+    必ず parent を付けること。**
+    """
     level = cfg.get("overpass_admin_level", "7")
     wards = cfg.get("overpass_wards")
+    parent = cfg.get("overpass_parent")
+    plevel = cfg.get("overpass_parent_level", "4")   # 4=都道府県
+    pdef = (f'area["name"="{parent}"]["admin_level"="{plevel}"]->.p;'
+            if parent else "")
+    scope = "(area.p)" if parent else ""
     if wards:
-        area_defs = "".join(
-            f'area["name"="{w}"]["admin_level"="{level}"]->.a{i};'
+        area_defs = pdef + "".join(
+            f'area{scope}["name"="{w}"]["admin_level"="{level}"]->.a{i};'
             for i, w in enumerate(wards)
         )
         node_defs = "".join(
@@ -552,8 +792,8 @@ def _overpass_collect(cfg, filters):
     else:
         area = cfg["overpass_area"]
         node_defs = "".join(f'node(area.a){f};' for f in filters)
-        q = ('[out:json][timeout:60];'
-             f'area["name"="{area}"]["admin_level"="{level}"]->.a;'
+        q = ('[out:json][timeout:60];' + pdef +
+             f'area{scope}["name"="{area}"]["admin_level"="{level}"]->.a;'
              f'({node_defs});out;')
     d = _overpass_query(q)
     seen = {}

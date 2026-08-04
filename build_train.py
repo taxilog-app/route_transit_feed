@@ -132,6 +132,31 @@ def get_lines_at_station(station_id: str) -> list[dict]:
 #    「ＪＲ」という広い網を入れた途端、全国の同名駅が通ってしまう。
 REQUIRE_PREF = ""
 
+# 🔴 2026-08-04 追記。「県名で始まらない住所」を別の県だと決めつけてはいけない。
+#    Yahooの住所は県名が付くとは限らない（実測：豊橋駅は「豊橋市花田町字西宿
+#    無番地」＝**県名なし**）。startswith だけで判定すると、その街で一番大きい駅が
+#    まるごと捨てられる。**別の都道府県名で始まっている時だけ**捨てること。
+_PREFS = (
+    "北海道 青森県 岩手県 宮城県 秋田県 山形県 福島県 茨城県 栃木県 群馬県 埼玉県 "
+    "千葉県 東京都 神奈川県 新潟県 富山県 石川県 福井県 山梨県 長野県 岐阜県 静岡県 "
+    "愛知県 三重県 滋賀県 京都府 大阪府 兵庫県 奈良県 和歌山県 鳥取県 島根県 岡山県 "
+    "広島県 山口県 徳島県 香川県 愛媛県 高知県 福岡県 佐賀県 長崎県 熊本県 大分県 "
+    "宮崎県 鹿児島県 沖縄県"
+).split()
+
+
+def is_wrong_pref(addr: str) -> bool:
+    """住所が「REQUIRE_PREF とは違う都道府県」だと**はっきり分かる**時だけ True。
+
+    県名が読み取れない住所（県名なしで市名から始まる等）は False＝捨てない。
+    判断できないものを捨てると、静かに駅が減る方向に間違える。"""
+    if not REQUIRE_PREF or not addr:
+        return False
+    for p in _PREFS:
+        if addr.startswith(p):
+            return p != REQUIRE_PREF
+    return False        # どの県名でも始まっていない＝判断できない＝捨てない
+
 
 def get_timetable(station_id: str, rail_id: str, kind: int) -> dict:
     html, _ = fetch(f"{BASE}/timetable/{station_id}/{rail_id}?kind={kind}")
@@ -205,9 +230,9 @@ def scrape_all(stations) -> tuple[dict, list]:
             except Exception as e:
                 failed.append((name, f"lines_{cid}", str(e)))
                 continue
-            # 住所が別の都道府県なら、同名の別の駅＝この候補は捨てる。
-            # 住所が読めない時は捨てない（読めないこと自体は異常ではない）。
-            if REQUIRE_PREF and addr and not addr.startswith(REQUIRE_PREF):
+            # 住所が**別の都道府県だとはっきり分かる**時だけ、同名の別の駅として捨てる。
+            # 県名が読み取れない住所（豊橋駅＝「豊橋市花田町…」）は捨てない。
+            if is_wrong_pref(addr):
                 failed.append((name, f"wrong_pref_{cid}", addr[:20]))
                 continue
             cand_matched, cand_seen_rail = [], set()
