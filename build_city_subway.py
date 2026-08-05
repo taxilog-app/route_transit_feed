@@ -443,6 +443,85 @@ CONFIGS = {
         "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
         "expected_stations": 0,  # 主役の乗り物が無い＝ターミナル駅だけで作る
     },
+    # ── 2026-08-05 追加（県庁所在地・九州の残り3県）──────────────────────────
+    # どれも運賃ブロックは「県全域」。鉄道はＪＲだけで、地下鉄・路面電車・私鉄は
+    # 無い（OSMで実測：佐賀市・大分市・宮崎市とも主役になる乗り物なし）。
+    # よって駅は terminals（実在する駅名をOSMから採取したもの）だけで作る。
+    # 路線名は Yahoo で実測＝3県とも全角の「ＪＲ」のみ。
+    "saga": {
+        "feed_label": "佐賀（JR）",
+        "pref": "佐賀県",
+        "city": "佐賀市・鳥栖市・唐津市・武雄市",
+        "slug": "saga",
+        "overpass_wards": ["佐賀市", "鳥栖市", "唐津市", "武雄市"],
+        "overpass_parent": "佐賀県",
+        "overpass_admin_level": "7",
+        # 実測（佐賀）: ＪＲ唐津線・長崎本線／（鳥栖）: ＪＲ長崎本線・鹿児島本線
+        #  （唐津）: ＪＲ唐津線・筑肥線
+        "line_patterns": {"jr": [r"ＪＲ"]},
+        # OSM実測の31駅から「バルーンさが」（熱気球大会の時だけ開く臨時駅）を除いた30駅。
+        "terminals": [
+            "佐賀", "鍋島", "伊賀屋", "久保田",
+            "鳥栖", "新鳥栖", "肥前旭", "肥前麓", "田代", "弥生が丘",
+            "唐津", "西唐津", "東唐津", "和多田", "虹ノ松原", "浜崎", "鬼塚",
+            "山本", "相知", "西相知", "厳木", "岩屋", "本牟田部", "佐里",
+            "武雄温泉", "高橋", "北方", "永尾", "三間坂", "肥前久保",
+        ],
+        "search_suffix": "佐賀",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 0,  # 主役の乗り物が無い＝ターミナル駅だけで作る
+    },
+    "oita": {
+        "feed_label": "大分（JR）",
+        "pref": "大分県",
+        "city": "大分市・別府市・中津市・日田市",
+        "slug": "oita",
+        "overpass_wards": ["大分市", "別府市", "中津市", "日田市"],
+        "overpass_parent": "大分県",
+        "overpass_admin_level": "7",
+        # 実測（大分）: ＪＲ久大本線・日豊本線・豊肥本線／（別府）: ＪＲ日豊本線
+        #  （日田）: ＪＲ久大本線・日田彦山線ＢＲＴ
+        "line_patterns": {"jr": [r"ＪＲ"]},
+        # OSM実測の34駅から「大分大学前駅」（同じ駅の重複表記）を除いた33駅。
+        "terminals": [
+            "大分", "西大分", "南大分", "古国府", "滝尾", "牧", "高城", "鶴崎",
+            "大在", "坂ノ市", "幸崎", "敷戸", "大分大学前", "中判田", "竹中",
+            "賀来", "豊後国分",
+            "別府", "別府大学", "東別府", "亀川",
+            "中津", "東中津", "今津",
+            "日田", "光岡", "夜明", "天ヶ瀬", "杉河内", "豊後三芳", "豊後中川",
+            "乙原", "雲泉寺",
+        ],
+        "search_suffix": "大分",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 0,
+    },
+    "miyazaki": {
+        "feed_label": "宮崎（JR）",
+        "pref": "宮崎県",
+        "city": "宮崎市・都城市・延岡市・日向市",
+        "slug": "miyazaki",
+        "overpass_wards": ["宮崎市", "都城市", "延岡市", "日向市"],
+        "overpass_parent": "宮崎県",
+        "overpass_admin_level": "7",
+        # 実測（宮崎）: ＪＲ日豊本線／（南宮崎）: ＪＲ日南線・日豊本線
+        #  （宮崎空港）: ＪＲ宮崎空港線／（都城）: ＪＲ吉都線・日豊本線
+        "line_patterns": {"jr": [r"ＪＲ"]},
+        # OSM実測の44駅。
+        "terminals": [
+            "宮崎", "南宮崎", "宮崎神宮", "宮崎空港", "田吉", "加納", "清武",
+            "日向住吉", "蓮ヶ池", "木花", "曽山寺", "運動公園", "子供の国", "佐土原",
+            "青島", "折生迫", "小内海", "内海", "田野", "旭ヶ丘",
+            "都城", "西都城", "五十市", "山之口", "谷頭", "万ヶ塚", "青井岳",
+            "東高崎", "高崎新田", "日向庄内",
+            "延岡", "南延岡", "北延岡", "土々呂", "南方", "北川", "市棚",
+            "日向長井",
+            "日向市", "財光寺", "南日向", "美々津", "日向前田", "日向沓掛",
+        ],
+        "search_suffix": "宮崎",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 0,
+    },
     "kumamoto": {
         "feed_label": "熊本（市電・JR・熊本電鉄）",  # 棚の索引に出す名前
         "pref": "熊本県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
@@ -999,13 +1078,29 @@ _WARD_CHUNK = 4
 
 
 def _overpass_query(q):
+    """Overpass に聞く。**失敗を成功と取り違えない**ことがこの関数の役目。
+
+    🔴 2026-08-05 修正（実測）。Overpass は時間切れのとき HTTP エラーを返さず、
+       **200 のまま `remark: "runtime error: Query timed out..."` と
+       中身ゼロの結果**を返す。以前はこれを素通りさせていたので、呼び出し側には
+       「駅が0件だった」と見えた。大分（4市・33駅名）で実際に起きており、
+       そのまま進めば**駅が1つも無い時刻表が棚に並ぶ**ところだった。
+       ＝ [[gotcha-city-feed-measure-dont-guess]] ⑦「0件は成功の顔をして現れる」の
+       別ルート。注意書きが付いていたら失敗として扱い、別サーバー・再試行に回す。
+    """
     d = None
     for attempt in range(3):
         for ep in _OVERPASS:
             try:
                 req = urllib.request.Request(ep, data=q.encode("utf-8"),
                                              headers={"User-Agent": "route_transit_feed (city subway)"})
-                d = json.load(urllib.request.urlopen(req, timeout=120))
+                got = json.load(urllib.request.urlopen(req, timeout=120))
+                remark = str(got.get("remark") or "")
+                if remark:
+                    # 「timed out」「runtime error」等。中身が空でなくても
+                    # **途中で打ち切られている**ので採用しない。
+                    raise RuntimeError(f"Overpass 注意書き: {remark}")
+                d = got
                 break
             except Exception as e:
                 print(f"  [overpass] {ep} 失敗: {e}")
@@ -1043,28 +1138,48 @@ def _overpass_collect(cfg, filters):
     pdef = (f'area["name"="{parent}"]["admin_level"="{plevel}"]->.p;'
             if parent else "")
     scope = "(area.p)" if parent else ""
+    # 🔴 点(node)と面(way)は**別々に聞く**。1本にまとめると仕事量が倍になり、
+    #    大分（4市・33駅名）で実測 96秒の時間切れになった。分ければ両方通る。
+    queries = []
     if wards:
         area_defs = pdef + "".join(
             f'area{scope}["name"="{w}"]["admin_level"="{level}"]->.a{i};'
             for i, w in enumerate(wards)
         )
-        node_defs = "".join(
-            f'node(area.a{i}){f};' for i in range(len(wards)) for f in filters
-        )
-        q = f'[out:json][timeout:90];{area_defs}({node_defs});out;'
+        for kind in ("node", "way"):
+            body = "".join(
+                f'{kind}(area.a{i}){f};'
+                for i in range(len(wards)) for f in filters
+            )
+            queries.append(f'[out:json][timeout:90];{area_defs}({body});out center;')
     else:
         area = cfg["overpass_area"]
-        node_defs = "".join(f'node(area.a){f};' for f in filters)
-        q = ('[out:json][timeout:60];' + pdef +
-             f'area{scope}["name"="{area}"]["admin_level"="{level}"]->.a;'
-             f'({node_defs});out;')
-    d = _overpass_query(q)
+        for kind in ("node", "way"):
+            body = "".join(f'{kind}(area.a){f};' for f in filters)
+            queries.append('[out:json][timeout:60];' + pdef +
+                           f'area{scope}["name"="{area}"]["admin_level"="{level}"]->.a;'
+                           f'({body});out center;')
+    elements = []
+    for i, q in enumerate(queries):
+        if i:
+            time.sleep(2)  # 同時2枠の作法（連投で429/504になる）
+        elements += _overpass_query(q).get("elements", [])
     seen = {}
-    for e in d.get("elements", []):
+    for e in elements:
         nm = (e.get("tags") or {}).get("name")
-        if nm and nm not in seen and e.get("lat"):
-            seen[nm] = {"name": nm, "city": cfg["city"],
-                        "lat": round(e["lat"], 5), "lng": round(e["lon"], 5)}
+        if not nm or nm in seen:
+            continue
+        # 🔴 2026-08-05 修正。駅は**点(node)とは限らず、面(way)で描かれている**
+        #    ことがある。以前は node しか聞いていなかったため、面で描かれた駅は
+        #    まるごと見えなかった。実測：佐賀駅は面だけ＝**その県で一番大きい駅が
+        #    1駅も取れない**状態だった（豊橋の取りこぼしと同じ型の事故）。
+        #    面には lat/lon が無いので out center の重心を使う。
+        lat = e.get("lat", (e.get("center") or {}).get("lat"))
+        lng = e.get("lon", (e.get("center") or {}).get("lon"))
+        if lat is None or lng is None:
+            continue
+        seen[nm] = {"name": nm, "city": cfg["city"],
+                    "lat": round(lat, 5), "lng": round(lng, 5)}
     return list(seen.values())
 
 
