@@ -270,6 +270,22 @@ def scrape_all(stations) -> tuple[dict, list]:
     return result, failed
 
 
+def jst_now_iso():
+    """いまの日本時刻。
+
+    🔴 2026-08-01 の修正でこの関数の**定義だけが抜け落ちていた**（呼び出しは
+       残っていた）。取得は70駅すべて成功するのに、その直後の書き出しで
+       NameError で落ちる＝**配信に進まないので前回のデータが残り続ける**。
+       アプリは動き続け、画面にも異常が出ないため、**2週間気づかなかった**
+       （2026-08-13 に発見。公開中のデータが7/31版のままだった）。
+       ⚠️ split_v2.py / build_city_subway.py にも同名の関数がある。直すときは
+          3つとも同じ書式（+09:00 固定）にそろえること。
+    """
+    from datetime import datetime, timedelta, timezone
+    return datetime.now(timezone(timedelta(hours=9))).strftime(
+        "%Y-%m-%dT%H:%M:%S+09:00")
+
+
 def prev_generated_at(stations: dict):
     """既存公開版を取得。駅データが今回と一致すれば前回のgenerated_atを返す（差分検知）。"""
     try:

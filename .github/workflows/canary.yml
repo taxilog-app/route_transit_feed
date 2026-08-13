@@ -39,6 +39,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
+      # 🔴 取得を始める前に道具そのものを点検する（数秒）。
+      #    2026-08-13：build_train.py から関数の定義だけが消えていて、
+      #    **70駅の取得に27分かけた後**に NameError で落ちていた。
+      #    配信されないので公開中は7/31版のまま＝2週間気づかなかった。
+      #    ここで弾けば、無駄な27分もYahoo!への無駄な問い合わせも避けられる。
+      - run: python check_scripts.py
       - id: canary
         run: |
           set +e
