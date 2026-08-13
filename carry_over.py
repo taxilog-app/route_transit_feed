@@ -31,6 +31,10 @@ from build_city_subway import CONFIGS as _CITY_CONFIGS  # noqa: E402
 FILES = [
     "subway_timetable.json",          # 福岡市地下鉄（公式Excel）
     "train_timetable.json",           # 福岡 JR・西鉄
+    # 🔴 フェリーも必ず回収する（2026-08-13 追加）。ここに書かないと、電車だけを
+    #    作り直した回に**フェリーが棚から消える**（棚は丸ごと置き換わるため）。
+    #    フェリーは別ワークフロー(ferry.yml)で作るので、電車側の回でここが効く。
+    "ferry_timetable.json",           # 福岡市営渡船（到着）
 ] + [f"{slug}_subway_timetable.json" for slug in _CITY_CONFIGS]
 
 # 最低限これだけは棚に無いと異常（＝配信中止）。
