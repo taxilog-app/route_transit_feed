@@ -200,6 +200,41 @@ def check_area():
     return r
 
 
+def check_city_roster():
+    """棚に並んでいるべき都市が全部並んでいるか（＝黙って消えていないか）。
+
+    🔴 2026-08-15 追加。それまで見張っていたのは福岡の2本だけで、
+    **他の35都市は消えても誰も気づけなかった**。実際に長崎（40駅）が
+    2026-08-04〜08-15 の11日間、棚から消えたまま放置された
+    （carry_over.py が回収の失敗を「この都市は今回も無し」と黙って流していた）。
+
+    名簿は CONFIGS（build_city_subway.py）＋福岡。ここに在るのに棚に無い＝
+    その営業圏の運転手には時刻表が出ていない、ということ。
+    """
+    from build_city_subway import CONFIGS  # 名簿の出どころは1つだけ
+    want = ["fukuoka"] + sorted(CONFIGS)
+    url = "https://taxilog-app.github.io/route_transit_feed/v2/index.json"
+    r = {"name": "棚の都市名簿", "url": url, "ok": False,
+         "want": len(want), "have": None, "missing": [], "extra": []}
+    code, body = fetch(url)
+    if code != 200 or not body:
+        r["reason"] = f"棚の索引が取れない（HTTP {code}）"
+        return r
+    try:
+        have = [c["slug"] for c in json.loads(body).get("cities", [])]
+    except Exception as e:
+        r["reason"] = f"棚の索引が読めない（{e}）"
+        return r
+    r["have"] = len(have)
+    r["missing"] = [s for s in want if s not in have]
+    r["extra"] = [s for s in have if s not in want]
+    r["ok"] = not r["missing"]
+    if r["missing"]:
+        r["reason"] = ("棚から消えている都市: " + "・".join(r["missing"]) +
+                       "（この営業圏の運転手には時刻表が出ていない）")
+    return r
+
+
 def main():
     print("Yahoo!路線情報 壊れ検知（カナリア）")
     results = []
@@ -222,6 +257,12 @@ def main():
         detail = res.get("reason") or f"{res.get('age_days')}日前"
         print(f"  {mark} {name}: {detail}")
         timetable_results.append(res)
+
+    print("\n棚の都市名簿チェック（消えた都市の検知）")
+    roster = check_city_roster()
+    roster_detail = roster.get("reason") or \
+        f"{roster['have']}/{roster['want']}都市そろっています"
+    print(f"  {'OK ' if roster['ok'] else 'NG '} {roster['name']}: {roster_detail}")
 
     total = len(results)
     ok = sum(1 for r in results if r["ok"])
@@ -253,6 +294,7 @@ def main():
         "checked_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
         "lines": results, "area": area,
         "timetables": timetable_results,
+        "city_roster": roster,
     }
     os.makedirs("out", exist_ok=True)
     with open("out/train_health.json", "w", encoding="utf-8") as f:
@@ -272,6 +314,8 @@ def main():
         else:
             summary += f"- {r['name']}: {r.get('reason')}\n"
 
+    summary += f"\n## 棚の都市名簿\n\n- {roster_detail}\n"
+
     print("\n" + summary)
     path = os.environ.get("GITHUB_STEP_SUMMARY")
     if path:
@@ -286,6 +330,16 @@ def main():
         failed = True
     elif state == "degraded":
         print("::warning::一部の路線が読めていません（アプリは表示を続けます）")
+
+    # 🔴 棚から都市が消えたら必ずメールを飛ばす（長崎が11日気づかれなかった穴）。
+    if roster["missing"]:
+        print(f"::error::時刻表が棚から消えている都市があります（{'・'.join(roster['missing'])}）。"
+              "その営業圏の運転手には時刻表が出ていません。"
+              "build-city ワークフローでその都市を作り直してください。")
+        failed = True
+    elif not roster["ok"]:
+        print(f"::error::棚の都市名簿を確認できません（{roster.get('reason')}）。")
+        failed = True
 
     if timetable_very_stale:
         names = "・".join(r["name"] for r in timetable_very_stale)
