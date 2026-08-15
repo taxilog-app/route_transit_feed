@@ -12,6 +12,8 @@
   1. HTTP 200 で取れるか（URL変更・404の検出）
   2. `<div id="mdServiceStatus">` ブロックが在るか（HTML構造の変更を検出）
   3. その中の最初の `<dt>` が既知の状態語に当たるか（表記変更を検出）
+     ※「その他」「運転計画」は Yahoo! の**受け皿の見出し**で、これ自体は正常。
+       重さは詳細文 `<dd>` から取り直す（アプリ _refineByDetail と同じ）。
   4. エリアページ area/7 が期待の形か（表が在る or 平常時の定型文が在る）
 
 もう一つ、時刻表（次の電車・終電）が古くなっていないかも見張る。
@@ -54,6 +56,10 @@ TIMETABLE_VERY_STALE_DAYS = 90  # 超えたら失敗（メールが飛ぶ）
 # ⚠️ アプリ lib/services/train_service.dart の _individualTargets と同じ内容にする。
 #    片方だけ増減させると壊れ検知が本番とズレる。
 INDIVIDUAL_TARGETS = [
+    # 🔴 2026-08-15 追加。アプリは 2026-08-05 に東海道新幹線を足していたのに
+    #    ここだけ11本のままだった＝博多発ののぞみが東海道側で止まる経路を
+    #    カナリアが一度も試していなかった。
+    ("https://transit.yahoo.co.jp/diainfo/7/0", "東海道新幹線"),
     ("https://transit.yahoo.co.jp/diainfo/8/0", "山陽新幹線"),
     ("https://transit.yahoo.co.jp/diainfo/410/0", "九州新幹線"),
     ("https://transit.yahoo.co.jp/diainfo/413/0", "西鉄天神大牟田線"),
@@ -67,16 +73,28 @@ INDIVIDUAL_TARGETS = [
     ("https://transit.yahoo.co.jp/diainfo/416/0", "西鉄貝塚線"),
 ]
 
-# アプリ _mapStatus と同じ語彙
+# ⚠️ アプリ _mapStatus と同じ語彙・同じ順番にする。
+#
+# 🔴 2026-08-15 実害。ここはアプリより語彙が少なく、「その他」「運転再開」を
+#    知らなかった。地震災害で山陽・九州新幹線の見出しが「その他」になった日に
+#    「状態の言い回しが変わった」と鳴ったが、**アプリはずっと前からこの言葉を
+#    知っていた**＝カナリアだけの空振り。しかも degraded はメールが飛ばないので、
+#    本物が壊れた時と見分けが付かないまま何日も埋もれる。語彙は必ず両方揃える。
 STATUS_WORDS = {
     "normal": ["平常運転", "通常運行"],
     "suspension": ["運転見合わせ", "運休", "運転中止"],
-    "delay": ["遅延", "ダイヤが乱れ", "運転状況", "運転計画"],
+    "delay": ["遅延", "ダイヤが乱れ", "運転状況", "運転再開"],
+    # 「その他」「運転計画」は Yahoo! の**受け皿の見出し**で、重さが書いていない。
+    # アプリは遅延として扱い、実際の重さは詳細文(<dd>)から取り直す。
+    "catchall": ["運転計画", "その他"],
 }
+CATCHALL_LABELS = ("その他", "運転計画")
 
 BLOCK_RE = re.compile(r'<div id="mdServiceStatus".*?</div>', re.DOTALL)
 DT_RE = re.compile(r"<dt[^>]*>(.*?)</dt>", re.DOTALL)
+DD_RE = re.compile(r"<dd[^>]*>(.*?)</dd>", re.DOTALL)
 TAG_RE = re.compile(r"<[^>]*>")
+SENTENCE_RE = re.compile(r"[。\n]")
 
 
 def fetch(url):
@@ -97,8 +115,47 @@ def map_status(text):
     """アプリ _mapStatus と同じ判定。当たらなければ None（＝表記が変わった疑い）。"""
     for state, words in STATUS_WORDS.items():
         if any(w in text for w in words):
-            return state
+            # 受け皿の見出しは、アプリと同じく遅延として扱う
+            return "delay" if state == "catchall" else state
     return None
+
+
+def refine_by_detail(status, label, detail):
+    """アプリ _refineByDetail と同じ判定。
+
+    見出しが受け皿の言葉（「その他」「運転計画」）の時だけ、詳細文を見て重さを
+    決め直す。2026-08-15 の九州新幹線は見出しが「その他」で、止まっている事実は
+    詳細の「熊本〜新水俣駅間の運転を見合わせています」にしか書かれていなかった。
+
+    判定は文単位。「振替輸送はありません」のような否定文で誤って重くしない。
+    """
+    if not any(w in label for w in CATCHALL_LABELS):
+        return status
+    if not detail:
+        return status
+    for sentence in SENTENCE_RE.split(detail):
+        if "ありません" in sentence or "ございません" in sentence:
+            continue  # 「〜はありません」＝無い、の意味。重くしない
+        if ("見合わせ" in sentence
+                or "運転中止" in sentence
+                # 「一部列車に運休」は全部止まっている訳ではないので遅延どまり
+                or ("運休" in sentence and "一部" not in sentence)):
+            return "suspension"
+    return status
+
+
+def extract_detail(block_html):
+    """運行情報ブロック内の詳細文(<dd>)。平常時の定型文は詳細なしとして None。"""
+    dd = DD_RE.search(block_html)
+    if not dd:
+        return None
+    text = TAG_RE.sub(" ", dd.group(1))
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return None
+    if "現在" in text and "情報はありません" in text:
+        return None
+    return text
 
 
 def check_individual(url, name):
@@ -120,10 +177,14 @@ def check_individual(url, name):
     label = TAG_RE.sub(" ", dt.group(1)).strip()
     status = map_status(label)
     r["label"] = label[:40]
-    r["status"] = status
     if status is None:
+        r["status"] = None
         r["reason"] = f"状態の言い回しが変わった（読めた文字＝「{label[:20]}」）"
         return r
+    # アプリと同じで、受け皿の見出しは詳細文で重さを取り直す
+    detail = extract_detail(block.group(0))
+    r["detail"] = (detail or "")[:120]
+    r["status"] = refine_by_detail(status, label, detail)
     r["ok"] = True
     return r
 
