@@ -1061,6 +1061,79 @@ CONFIGS = {
         "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
         "expected_stations": 0,  # 主役の乗り物が無い＝ターミナル駅だけで作る
     },
+    # ─── 路面電車が主役の3市（2026-08-15 追加）────────────────────────────
+    # 県庁所在地で路面電車が走っている＝停留場が細かく、タクシーの客の動きに
+    # 直結する。OSM実測＝富山39（路面28＋新交通11）／高知58／松山28。
+    "toyama": {
+        "feed_label": "富山（市内電車・ポートラム・JR）",  # 棚の索引に出す名前
+        "pref": "富山県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "富山市",
+        "slug": "toyama",
+        "overpass_parent": "富山県",
+        "overpass_area": "富山市",
+        "overpass_admin_level": "7",
+        # 🔴 富山は路面電車(tram_stop)だけでなく**新交通(light_rail)11駅**がある。
+        #    旧・富山ライトレール（岩瀬浜方面）で、2020年に市内電車と直通した。
+        #    片方だけ聞くと11駅ぶん静かに落ちる。
+        "overpass_filters": ['["railway"="tram_stop"]',
+                             '["railway"="station"]["station"="light_rail"]'],
+        # 実測（南富山駅前）: 富山地方鉄道１系統・２系統
+        # 実測（岩瀬浜）: 富山地方鉄道富山港線
+        # 実測（富山）: あいの風とやま鉄道・ＪＲ北陸新幹線・ＪＲ高山本線
+        "line_patterns": {
+            "tram": [r"富山地方鉄道"],
+            "jr": [r"ＪＲ"],
+            "private": [r"あいの風とやま鉄道", r"万葉線"],
+        },
+        "terminals": ["富山", "新富山口", "東富山", "呉羽", "越中八尾"],
+        "search_suffix": "富山",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 39,  # 路面電車28＋新交通11（OSM実測 2026-08-15）
+    },
+    "kochi": {
+        "feed_label": "高知（とさでん・JR）",  # 棚の索引に出す名前
+        "pref": "高知県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "高知市",
+        "slug": "kochi",
+        "overpass_parent": "高知県",
+        "overpass_area": "高知市",
+        "overpass_admin_level": "7",
+        "overpass_filters": ['["railway"="tram_stop"]'],
+        # 実測（はりまや橋）: とさでん交通伊野線・後免線・桟橋線
+        # 実測（高知）: ＪＲ土讃線／（後免町）: 土佐くろしお鉄道ごめん・なはり線
+        "line_patterns": {
+            "tram": [r"とさでん交通"],
+            "jr": [r"ＪＲ"],
+            "private": [r"土佐くろしお鉄道"],
+        },
+        "terminals": ["高知", "旭", "円行寺口", "入明", "薊野", "土佐一宮"],
+        "search_suffix": "高知",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 58,  # とさでん交通の停留場（OSM実測 2026-08-15）
+    },
+    "matsuyama": {
+        "feed_label": "松山（伊予鉄・JR）",  # 棚の索引に出す名前
+        "pref": "愛媛県",  # 同名駅よけ（駅ページの住所がこの県で始まること）
+        "city": "松山市",
+        "slug": "matsuyama",
+        "overpass_parent": "愛媛県",
+        "overpass_area": "松山市",
+        "overpass_admin_level": "7",
+        "overpass_filters": ['["railway"="tram_stop"]'],
+        # 実測（大街道）: 伊予鉄道松山市駅線・環状線・ＪＲ松山駅前線
+        #   ⚠️「伊予鉄道ＪＲ松山駅前線」は**市内電車の路線名**（JRではない）。
+        #     JR側のパターンで拾わないよう、私鉄は事業者名「伊予鉄道」で見る。
+        # 実測（松山市）: 伊予鉄道横河原線・郡中線・高浜線（＝郊外電車）
+        # 実測（松山）: ＪＲ予讃線・予讃線・内子線
+        "line_patterns": {
+            "tram": [r"伊予鉄道"],
+            "jr": [r"ＪＲ予讃線", r"ＪＲ内子線"],
+        },
+        "terminals": ["松山", "松山市", "三津浜", "伊予和気", "市坪", "北伊予"],
+        "search_suffix": "松山",
+        "attribution": "出典: Yahoo!路線情報（駅時刻表）／駅位置: OpenStreetMap contributors",
+        "expected_stations": 28,  # 伊予鉄道市内線の停留場（OSM実測 2026-08-15）
+    },
 }
 
 
