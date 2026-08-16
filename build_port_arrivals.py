@@ -87,6 +87,9 @@ CRUISE_PORTS = {
 
 # ── フェリー太古（野母商船・博多〜五島） ───────────────────────────────
 TAIKO_URL = "https://www.nomo.co.jp/taiko/timetable.html"
+# 運休日はトップページの「運航カレンダー」（WordPressのBiz Calendar）が持っている。
+# 画面には色で出るだけだが、日付の一覧が bizcalOptions に埋め込まれている。
+TAIKO_TOP = "https://www.nomo.co.jp/taiko/"
 TAIKO_ATTRIBUTION = "出典：野母商船株式会社「フェリー太古 時刻表」"
 # 🔴 座標は**博多埠頭タクシー乗り場**（社長が地図上で指定 2026-08-16）。
 #    第2ターミナルの建物（OSM 33.605160,130.397642）ではない。客はここへ出てくる。
@@ -274,7 +277,37 @@ def parse_cruise(raw, today):
 # ══════════════════════════════════════════════════════════════════════
 # フェリー太古（野母商船）
 # ══════════════════════════════════════════════════════════════════════
-def parse_taiko(raw):
+def parse_taiko_no_service(raw):
+    """太古の**運休日**をトップページの運航カレンダーから取る。
+
+    データの在処＝`var bizcalOptions = {...}`（WordPressのBiz Calendar）。
+      temp_holidays … 運休日（例 2026-09-28）
+      eventdays     … ドック入渠の期間（例 2026-05-10〜05-22・旅客の運航なし）
+
+    🔴 **「運休日」＝その日に博多着が無い日** と読む。根拠はページの但し書き:
+       「オレンジ色部分、太古運休日です。**運休日前日23：45発の出航はありません**」
+       太古は前夜23:45に博多を出て翌朝8:15に福江着、その日の10:10に福江を出て
+       17:50に博多へ戻る。前夜の出航が無い＝翌日の折り返しも無い＝**その日の
+       博多着が無い**。日付を1日ずらして読むと、走っている日を運休と出してしまう。
+    """
+    m = re.search(r"var\s+bizcalOptions\s*=\s*(\{.*?\});", raw, re.S)
+    if not m:
+        raise SystemExit(
+            "✗ 太古の運航カレンダーが見つかりません（ページの作りが変わった）。"
+            "運休日が分からないまま配ると、運休の日に『17:50着』と嘘を出します。")
+    opt = json.loads(m.group(1))
+    days = set()
+    for key in ("temp_holidays", "eventdays"):
+        for line in (opt.get(key) or "").replace("\r", "\n").split("\n"):
+            line = line.strip()
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", line):
+                days.add(line.replace("-", ""))
+    if not days:
+        raise SystemExit("✗ 太古の運休日が0件（読み取りに失敗した疑い）")
+    return sorted(days)
+
+
+def parse_taiko(raw, no_service):
     """上り便（五島発 → 博多着）の博多着時刻を取る。
 
     表は「港名 / 博多 / 宇久 / 小値賀 / 青方 / 奈留 / 福江」の横並びで、
@@ -308,9 +341,11 @@ def parse_taiko(raw):
             "license": "",
             "attribution": TAIKO_ATTRIBUTION,
             "terms": "",
-            # 🔴 運休日がある（太古運航カレンダー／九州のりものinfo.com）。
-            #    ここでは平常ダイヤだけを配る。欠航は別の仕組みで扱う。
-            "note": "運休日あり。荒天・法定検査で欠航することがあります",
+            # 🔴 運休日（法定検査・ドック入渠）は no_service で配る。
+            #    ここに残るのは**当日の荒天欠航**だけ＝それは別の仕組みが要る。
+            "note": "当日の荒天欠航は反映されません。公式でご確認ください",
+            # その日に博多着が無い日（YYYYMMDD）。運航カレンダーから取得。
+            "no_service": no_service,
             "ports": [dict(TAIKO_PORT, arrivals=[{
                 "h": int(m.group(1)), "m": int(m.group(2)),
                 "from": origin, "route": "博多〜五島",
@@ -473,7 +508,13 @@ def check(doc, today):
             for a in arr:
                 if not (0 <= a["h"] <= 23 and 0 <= a["m"] <= 59):
                     ng.append(f"{tag}: 時刻が異常 {a['h']}:{a['m']}")
-            print(f"  {tag}: 到着 {len(arr)}便 / 港 {len(op['ports'])}か所")
+            ns = op.get("no_service") or []
+            future_ns = [d for d in ns if d >= today.strftime("%Y%m%d")]
+            print(f"  {tag}: 到着 {len(arr)}便 / 港 {len(op['ports'])}か所"
+                  f" / 運休日 {len(ns)}日（今日以降 {len(future_ns)}日）")
+            if future_ns:
+                print("      今後の運休 " + " ".join(
+                    f"{d[4:6]}/{d[6:]}" for d in future_ns[:14]))
 
     if ng:
         print("\n✗ 検査で止めました:", file=sys.stderr)
@@ -486,8 +527,9 @@ def build(check_only=False):
     today = dt.datetime.now(JST).date()
     print("① クルーズ寄港予定を取得中 …", flush=True)
     cruise = parse_cruise(fetch(CRUISE_URL), today)
-    print("② フェリー太古の時刻表を取得中 …", flush=True)
-    taiko = parse_taiko(fetch(TAIKO_URL))
+    print("② フェリー太古の時刻表と運休日を取得中 …", flush=True)
+    taiko_ns = parse_taiko_no_service(fetch(TAIKO_TOP))
+    taiko = parse_taiko(fetch(TAIKO_URL), taiko_ns)
     print(f"③ 九州郵船のダイヤ検索を取得中 …（{KYUYOU_DAYS}日分×3航路）", flush=True)
     kyuyou = parse_kyuyou(today)
 
