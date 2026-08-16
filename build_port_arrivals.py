@@ -51,6 +51,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 
@@ -195,7 +196,65 @@ def pin_year(rows, today):
     return cand[0][0]
 
 
-def parse_cruise(raw, today):
+def _norm_ship(s):
+    """船名を突き合わせ用にそろえる（全角半角・大文字小文字・中黒を無視）。"""
+    return re.sub(r"[\s・･]", "", unicodedata.normalize("NFKC", s).upper())
+
+
+# 「和名【英名】（運航会社：…）総トン数 X 全長 X 定員 N人」から定員を拾う。
+_SHIP_SPEC = re.compile(
+    r"([^\s（）【】]+)\s*【([^】]+)】.{0,140}?定員\s*([\d,]+)\s*人")
+
+
+def fetch_ship_capacities(cruise_raw, base):
+    """クルーズ船の**定員**を、寄港予定ページが張っているリンクを辿って集める。
+
+    🔴 URLを推測しない（社長の指摘 2026-08-16「一年一年URLが変わる気がします」）。
+       実際、船の諸元は年代でページが分かれている（kikou.html＝2020年以降、
+       kikou2.html＝2019年以前）。年が変われば増える可能性が高い。
+       ところが**寄港予定の表の船名は、その船の諸元へのリンクになっている**。
+       市が張ったリンクを辿れば、ページが増えても勝手に追随できる。
+
+    ⚠️ 取れるのは**定員（最大何人乗れるか）であって、その日の実際の乗客数ではない**。
+       実際の乗船者数は事前に公表されない。画面でも「定員」と書くこと。
+    """
+    table = re.search(r"<table.*?</table>", cruise_raw, re.S | re.I)
+    if not table:
+        return {}, []
+    # 船名セル（3列目）の中のリンクを集める。
+    pages = []
+    for r in re.findall(r"<tr.*?</tr>", table.group(0), re.S | re.I):
+        tds = re.findall(r"<td[^>]*>(.*?)</td>", r, re.S | re.I)
+        if len(tds) < 3:
+            continue
+        for href in re.findall(r'href="([^"]+)"', tds[2]):
+            url = urllib.parse.urljoin(base, href.split("#")[0])
+            if url not in pages:
+                pages.append(url)
+
+    caps = {}
+    for url in pages:
+        try:
+            raw = fetch(url, timeout=30)
+        except Exception as e:                       # noqa: BLE001
+            print(f"    ! 諸元ページが取れません（{url}）: {e}", file=sys.stderr)
+            continue
+        t = re.sub(r"<script.*?</script>", " ", raw, flags=re.S | re.I)
+        t = re.sub(r"<br[^>]*>", " ", t, flags=re.I)
+        t = re.sub(r"<[^>]+>", " ", t)
+        t = re.sub(r"\s+", " ", html.unescape(t).replace("　", " "))
+        n = 0
+        for jp, en, cap in _SHIP_SPEC.findall(t):
+            v = int(cap.replace(",", ""))
+            for k in (_norm_ship(jp), _norm_ship(en)):
+                caps.setdefault(k, v)
+            n += 1
+        print(f"    定員を読み込み: {url.rsplit('/', 1)[-1]} → {n}隻")
+        time.sleep(1)
+    return caps, pages
+
+
+def parse_cruise(raw, today, caps):
     tb = tables(raw)
     if not tb:
         raise SystemExit("✗ クルーズの表が見つかりません（ページの作りが変わった）")
@@ -250,6 +309,10 @@ def parse_cruise(raw, today):
             "berth": berth,
             "from": c[4],
             "to": c[5],
+            # 🔴 定員（最大何人乗れるか）。**その日の実際の乗客数ではない**。
+            #    5,655人と458人では待ち方がまるで違うので、判断材料として出す。
+            #    引けなければ null（当てずっぽうの数字を出さない）。
+            "capacity": caps.get(_norm_ship(c[2])),
             # 「発着」列＝**その船が出発した国の名前**（社長 2026-08-16 確認）。
             # 🔴 画面には出さない。前港（from）と同じことを言っており、運転手の
             #    判断材料にならない。将来使うかもしれないのでフィードには残す。
@@ -489,6 +552,9 @@ def check(doc, today):
                     ng.append(f"{tag}: 船名が空 {c['date']}")
                 # 🔴 「S PECTRUM OF THE SEAS」型の割れを見張る（cell_text 参照）。
                 #    先頭が1文字だけ離れているのは、まずタグの分割ミス。
+                if c.get("capacity") is not None and not (
+                        10 <= c["capacity"] <= 10000):
+                    ng.append(f"{tag}: 定員が異常 {c['ship']} {c['capacity']}人")
                 if re.match(r"^[A-Za-z] [A-Za-z]", c["ship"]):
                     ng.append(f"{tag}: 船名が割れている疑い {c['ship']!r} "
                               f"({c['date']})")
@@ -498,6 +564,13 @@ def check(doc, today):
             per = {}
             for c in calls:
                 per[c["date"]] = per.get(c["date"], 0) + 1
+            if any("capacity" in c for c in calls):
+                withcap = [c for c in calls if c.get("capacity")]
+                print(f"      定員が引けた便 {len(withcap)}/{len(calls)}")
+                miss = sorted({c["ship"] for c in calls
+                               if not c.get("capacity")})
+                if miss:
+                    print("      ⚠️ 定員が引けない船: " + " / ".join(miss))
             if len(per) > 1:
                 print("      日別 " + " ".join(
                     f"{d[4:6]}/{d[6:]}:{n}便" for d, n in sorted(per.items())))
@@ -526,7 +599,9 @@ def check(doc, today):
 def build(check_only=False):
     today = dt.datetime.now(JST).date()
     print("① クルーズ寄港予定を取得中 …", flush=True)
-    cruise = parse_cruise(fetch(CRUISE_URL), today)
+    cruise_raw = fetch(CRUISE_URL)
+    caps, cap_pages = fetch_ship_capacities(cruise_raw, CRUISE_URL)
+    cruise = parse_cruise(cruise_raw, today, caps)
     print("② フェリー太古の時刻表と運休日を取得中 …", flush=True)
     taiko_ns = parse_taiko_no_service(fetch(TAIKO_TOP))
     taiko = parse_taiko(fetch(TAIKO_URL), taiko_ns)
