@@ -23,12 +23,21 @@ false にして配り直せば**その航路だけ**消える。アプリの作�
         市も数日に1回ページを更新する）。月1回では嘘の時刻を出す。
   ② フェリー太古（野母商船）… 公式サイトの時刻表（HTML）。
      利用規約ページが存在せず著作権表記のみ。事実（時刻）だけを出典付きで出す。
+  ③ 九州郵船（壱岐・対馬）… 公式サイトの**ダイヤ検索**（日付を渡すと時刻が返る）。
+     🔴 PDFは読まない。検索は配船パターンA/B/Cを解決済みの時刻を返すため。
+        2026-08-16 にPDFと突き合わせ、パターンの切り替わり日（8/16 B → 8/17 A）
+        まで含めて完全一致を確認した。
+
+【🔴 ここに入っていないもの＝当日の欠航】
+  時化などの当日欠航は、九州郵船・野母商船・福岡市営渡船のいずれも自社サイトに
+  載せず「九州のりものinfo.com」へ案内している。そのサイトは robots.txt で
+  データ掲載ページを Disallow しており、**機械での取得を断っている**。
+  2026-08-16 に運営協議会へ照会中。回答が出るまで欠航は扱わない。
+  ＝**このフィードの時刻は「予定」であって「今日動いているか」ではない。**
 
 【まだ入っていないもの】
-  ・九州郵船（壱岐・対馬）＝時刻表が**PDFのみ**。1枚に4航路＋配船パターンA/B/C＋
-    運航カレンダーが同居する複雑な組版で、自動読み取りは誤読の危険が高い。
-    別途 §九州郵船 の方針を決めてから。
-  ・カメリアライン（釜山）＝1日1便。手入力で足りる。
+  ・カメリアライン（釜山・博多着7:30）＝1日1便。手入力で足りる。
+  ・海中ライン（安田産業汽船・博多ふ頭第1着・日4〜12便）＝未検討。
 
 使い方:
     python3 build_port_arrivals.py            # 出力 out/port_arrivals.json
@@ -41,6 +50,8 @@ import json
 import os
 import re
 import sys
+import time
+import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -83,11 +94,38 @@ TAIKO_ATTRIBUTION = "出典：野母商船株式会社「フェリー太古 時�
 TAIKO_PORT = {"name": "博多ふ頭第二ターミナル", "short": "博多ふ頭",
               "area": "fukuoka", "lat": 33.604536, "lng": 130.398269}
 
+# ── 九州郵船（壱岐・対馬） ─────────────────────────────────────────────
+# 🔴 PDFは読まない。サイトの「ダイヤ検索」を使う（社長が発見 2026-08-16）。
+#    検索は**配船パターンA/B/Cを解決済みの時刻**を返すので、カレンダーと
+#    突き合わせる必要がない。唐津航路が混ざる心配も無い（航路を指定するため）。
+#    2026-08-16 にPDFと突き合わせて完全一致を確認済み。
+KYUYOU_SEARCH = "https://www.kyu-you.co.jp/routes/search"
+KYUYOU_REFERER = "https://www.kyu-you.co.jp/route/"
+KYUYOU_ATTRIBUTION = "出典：九州郵船株式会社「航路・ダイヤ案内」"
+
+# 博多に着く航路だけ。値はサイトのフォームの port_from（実測）。
+# 6（壱岐・印通寺）は唐津航路なので叩かない＝博多に来ない。
+KYUYOU_FROM = {2: "壱岐（芦辺・郷ノ浦）", 4: "対馬（厳原）", 8: "対馬（比田勝）"}
+KYUYOU_TO_HAKATA = 1
+
+# 何日先まで取るか。🔴 むやみに増やさない（1日あたり3回×日数だけ相手を叩く）。
+#    ハブは週2回作り直すので、7日あれば次の作り直しまで穴が空かない。
+KYUYOU_DAYS = 7
+KYUYOU_SLEEP = 2.0  # 問い合わせの間隔（秒）。相手は小さな会社のサイト。
+
+# 🔴 乗り場は太古と同じ（社長確認 2026-08-16）。
+#    ジェットフォイルはベイサイドプレイス着だが、客が出てくる乗り場は同じ。
+KYUYOU_PORT = dict(name="博多ふ頭第二ターミナル", short="博多ふ頭",
+                   area="fukuoka", lat=33.604536, lng=130.398269)
+
 WD = "月火水木金土日"
 
 
-def fetch(url, timeout=60):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+def fetch(url, timeout=60, headers=None):
+    h = {"User-Agent": UA}
+    if headers:
+        h.update(headers)
+    req = urllib.request.Request(url, headers=h)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read().decode("utf-8", errors="replace")
 
@@ -221,6 +259,10 @@ def parse_cruise(raw, today):
         "name": "クルーズ客船",
         "enabled": True,
         "kind": "dated",
+        "row_title": "ship",   # 画面の主役＝船名（クルーズは船が主役）
+        # 🔴 クルーズだけ「近日の寄港」を出す。2か月で19回しか無いので、
+        #    今日の分だけだと画面がほぼ空になり「いつ来るか」が分からない。
+        "upcoming": True,
         "source": CRUISE_URL,
         "license": "",
         "attribution": CRUISE_ATTRIBUTION,
@@ -260,6 +302,8 @@ def parse_taiko(raw):
             "name": "フェリー太古（野母商船）",
             "enabled": True,
             "kind": "daily",
+            "row_title": "from",   # 画面の主役＝どこから来たか
+            "upcoming": False,     # 毎日走るので「近日」を出すと溢れる
             "source": TAIKO_URL,
             "license": "",
             "attribution": TAIKO_ATTRIBUTION,
@@ -273,6 +317,109 @@ def parse_taiko(raw):
             }])],
         }
     raise SystemExit("✗ 太古の時刻表が見つかりません（ページの作りが変わった）")
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 九州郵船（壱岐・対馬）
+# ══════════════════════════════════════════════════════════════════════
+def parse_kyuyou(today):
+    """ダイヤ検索を日付ごとに引いて、**博多に着く便**だけを集める。
+
+    返るHTMLの形（実測 2026-08-16）:
+        <h3>ジェットフォイルヴィーナス/ヴィーナス2</h3>
+        <dl class="time-table-block red">
+          <dt>122便</dt>
+          <dd>壱岐（郷ノ浦） 発 08:45</dd>
+          <dd>博多 着 09:55</dd>
+        </dl>
+    🔴 1つの便が複数の航路の検索結果に出る（224便は壱岐からも対馬からも出る）。
+       **(日付, 便名) で重複を取る**こと。
+    """
+    calls, seen = [], set()
+    for i in range(KYUYOU_DAYS):
+        d = today + dt.timedelta(days=i)
+        for pid, pname in KYUYOU_FROM.items():
+            q = urllib.parse.urlencode({
+                "month": d.strftime("%Y-%m"), "day": str(d.day),
+                "port_from": pid, "port_to": KYUYOU_TO_HAKATA,
+            })
+            raw = fetch(f"{KYUYOU_SEARCH}?{q}", timeout=30, headers={
+                # 🔴 これが無いと 404 が返る（サイトがajaxとして扱うため）。
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": KYUYOU_REFERER,
+            })
+            for head, body in re.findall(r"<h3[^>]*>(.*?)</h3>(.*?)(?=<h3|\Z)",
+                                         raw, re.S):
+                kind = cell_text(head)
+                if not kind:
+                    continue
+                for dl in re.findall(
+                        r'<dl class="time-table-block[^"]*">(.*?)</dl>',
+                        body, re.S):
+                    m = re.search(r"<dt>(.*?)</dt>", dl, re.S)
+                    if not m:
+                        continue
+                    trip = cell_text(m.group(1))
+                    # 区間は <dd> 1つの中に全部入っている（_hakata_leg 参照）。
+                    got = _hakata_leg(" ".join(
+                        cell_text(x)
+                        for x in re.findall(r"<dd>(.*?)</dd>", dl, re.S)))
+                    if not got:
+                        continue
+                    hh, mm, origin = got
+                    key = (d.strftime("%Y%m%d"), trip)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    calls.append({
+                        "date": key[0], "h": hh, "m": mm,
+                        "ship": f"{trip} {kind}",
+                        "berth": "", "from": origin, "to": "", "base": "",
+                        "depart": None,
+                    })
+            time.sleep(KYUYOU_SLEEP)   # 相手を叩きすぎない
+    calls.sort(key=lambda c: (c["date"], c["h"], c["m"]))
+    return {
+        "key": "kyu_you",
+        "name": "九州郵船（壱岐・対馬）",
+        "enabled": True,
+        "kind": "dated",
+        "row_title": "from",          # 画面の主役＝「どこから来たか」
+        "upcoming": False,            # ほぼ毎日走るので「近日」は出さない
+        "source": KYUYOU_REFERER,
+        "license": "",
+        "attribution": KYUYOU_ATTRIBUTION,
+        "terms": "",
+        # 🔴 当日の欠航は反映されない（サイト自身がそう明記している）。
+        "note": "当日の運航状況は反映されません。欠航は公式でご確認ください",
+        "ports": [dict(KYUYOU_PORT, calls=calls, arrivals=[])],
+    }
+
+
+_LEG = re.compile(r"(\S+?)\s+(発|着)\s+(\d{1,2}):(\d{2})")
+
+
+def _hakata_leg(text):
+    """1便ぶんの行程から「博多に着く時刻」と「その直前に出た港」を取る。
+
+    ⚠️ 区間は `<dd>` **1つの中にまとめて**入っている（2026-08-16 実測）。
+       `<dd>` ごとに1区間だと思って読むと0件になる。
+
+    text 例: '対馬（厳原） 発 08:50 壱岐（芦辺） 着 11:05
+              壱岐（芦辺） 発 11:15 博多 着 13:25'
+    → (13, 25, '壱岐（芦辺）')
+    """
+    legs = _LEG.findall(text)
+    for i, (port, kind, h, m) in enumerate(legs):
+        if port != "博多" or kind != "着":
+            continue
+        origin = ""
+        for p2, k2, _, _ in reversed(legs[:i]):
+            if k2 == "発":
+                origin = p2
+                break
+        return int(h), int(m), origin
+    return None
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -312,6 +459,13 @@ def check(doc, today):
                               f"({c['date']})")
             print(f"  {tag}: 寄港 {len(calls)}件（うち今日以降 {len(future)}件）"
                   f" / 港 {len(op['ports'])}か所")
+            # 🔴 日ごとの本数を必ず出す。黙って減っていても気づけるように。
+            per = {}
+            for c in calls:
+                per[c["date"]] = per.get(c["date"], 0) + 1
+            if len(per) > 1:
+                print("      日別 " + " ".join(
+                    f"{d[4:6]}/{d[6:]}:{n}便" for d, n in sorted(per.items())))
         else:
             arr = [a for p in op["ports"] for a in p["arrivals"]]
             if not arr:
@@ -334,14 +488,16 @@ def build(check_only=False):
     cruise = parse_cruise(fetch(CRUISE_URL), today)
     print("② フェリー太古の時刻表を取得中 …", flush=True)
     taiko = parse_taiko(fetch(TAIKO_URL))
+    print(f"③ 九州郵船のダイヤ検索を取得中 …（{KYUYOU_DAYS}日分×3航路）", flush=True)
+    kyuyou = parse_kyuyou(today)
 
     doc = {
         "version": 1,
         "generated_at": dt.datetime.now(JST).isoformat(timespec="seconds"),
-        "operators": [cruise, taiko],
+        "operators": [cruise, taiko, kyuyou],
     }
 
-    print("③ 検査")
+    print("④ 検査")
     if check(doc, today):
         return 1
     if check_only:
