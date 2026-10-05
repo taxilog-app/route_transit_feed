@@ -41,6 +41,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      ports: ${{ steps.ports.outcome }}
     steps:
       # サプライチェーン対策: 公式actionをコミットSHAで固定（タグ付け替え攻撃を防ぐ）
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
@@ -52,10 +54,18 @@ jobs:
       - run: python check_scripts.py
       # フェリーを作る。崩れたら非0終了で配信に進まない＝棚は前回のまま。
       - run: python build_ferry.py
-      # 港の到着（クルーズ客船・フェリー太古）。これも崩れたらここで止まる。
+      # 港の到着（クルーズ客船・フェリー太古・九州郵船）。
       # 🔴 市営渡船とは別ファイル(port_arrivals.json)にしている。既存ファイルに
       #    項目を足すと古いアプリで配信が丸ごと止まるため（出力項目の完全一致検査）。
-      - run: python build_port_arrivals.py
+      # 🔴 ここで止めない（2026-10-05 社長指示「クルーズと壱岐対馬五島は別」）。
+      #    以前はクルーズに乗り場未確認の便が1つ出ただけで全部止まり、壱岐対馬・
+      #    五島まで1か月以上古いまま＝運転手の画面が空になった。
+      #    道具は会社ごとに作り、崩れた会社は公開中の版を残す。全滅でも
+      #    carry_over が公開中のファイルを回収する。要対応があれば最後の
+      #    「要対応を赤にする」で記録を赤にする（配ったうえで気づかせる）。
+      - id: ports
+        continue-on-error: true
+        run: python build_port_arrivals.py
       # 🔴 フェリー以外（電車・地下鉄・他都市）を公開中の棚から回収する。
       #    棚は「今回アップしたもので丸ごと置き換わる」ので、これを飛ばすと
       #    **フェリーだけの棚になって電車が全部消える**。
@@ -74,3 +84,9 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4.0.5
+      # 配った後で、港の到着に要対応（外した便・作れなかった会社）があれば赤にする。
+      - name: 要対応を赤にする
+        if: needs.build.outputs.ports == 'failure'
+        run: |
+          echo "::error::港の到着に要対応があります。build ジョブの『build_port_arrivals.py』の記録を見てください（配信は済んでいます）"
+          exit 1

@@ -58,6 +58,11 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out", "port_arrivals.json")
 JST = dt.timezone(dt.timedelta(hours=9))
+# いま棚に出ている版。作れなかった会社の代わりにこれを残す。
+PUBLISHED_URL = ("https://taxilog-app.github.io/route_transit_feed/"
+                 "port_arrivals.json")
+# 配ったが対応が要るもの（外した便・作れなかった会社）。最後にまとめて赤で出す。
+PROBLEMS = []
 UA = "route-timer-app feed builder (taxilog-app) build_port_arrivals.py"
 
 # ── クルーズ客船（福岡市） ──────────────────────────────────────────────
@@ -293,12 +298,17 @@ def parse_cruise(raw, today, caps):
         berth = c[3]
         key = "箱崎" if "箱崎" in berth else "中央"
         meta = CRUISE_PORTS[key]
-        # 🔴 乗り場が未確認の岸壁に着く便が出たら、当てずっぽうの座標を配らずに止める。
+        # 🔴 乗り場が未確認の岸壁に着く便は、当てずっぽうの座標を配らずに**その便だけ外す**。
+        #    以前はここで全体を止めていた。2026-09-02 に箱崎５岸の便(10/14)が載った途端、
+        #    クルーズどころか壱岐対馬・五島まで1か月以上作り直されず、運転手の画面が
+        #    空になった（社長指摘 2026-10-05「クルーズと壱岐対馬五島は別」）。
+        #    外した便は PROBLEMS に積み、作り直しの記録を赤にして気づけるようにする。
         if not meta["verified"]:
-            raise SystemExit(
-                f"✗ {meta['name']}に着く便が出ました（{c[0]} {c[2]} / {berth}）。"
-                "この港のタクシー乗り場をまだ確認していません。"
-                "社長に乗り場を聞いて CRUISE_PORTS に入れてから配ってください。")
+            PROBLEMS.append(
+                f"{meta['name']}に着く便を外しました（{c[0]} {c[2]} / {berth}）。"
+                "この港のタクシー乗り場が未確認です。社長に乗り場を聞いて "
+                "CRUISE_PORTS に入れてください。")
+            continue
         p = ports.setdefault(key, dict(meta, calls=[]))
         p.pop("verified", None)
         p["calls"].append({
@@ -596,37 +606,92 @@ def check(doc, today):
     return ng
 
 
-def build(check_only=False):
-    today = dt.datetime.now(JST).date()
-    print("① クルーズ寄港予定を取得中 …", flush=True)
+def _build_cruise(today):
     cruise_raw = fetch(CRUISE_URL)
-    caps, cap_pages = fetch_ship_capacities(cruise_raw, CRUISE_URL)
-    cruise = parse_cruise(cruise_raw, today, caps)
-    print("② フェリー太古の時刻表と運休日を取得中 …", flush=True)
+    caps, _ = fetch_ship_capacities(cruise_raw, CRUISE_URL)
+    return parse_cruise(cruise_raw, today, caps)
+
+
+def _build_taiko(today):
     taiko_ns = parse_taiko_no_service(fetch(TAIKO_TOP))
-    taiko = parse_taiko(fetch(TAIKO_URL), taiko_ns)
-    print(f"③ 九州郵船のダイヤ検索を取得中 …（{KYUYOU_DAYS}日分×3航路）", flush=True)
-    kyuyou = parse_kyuyou(today)
+    return parse_taiko(fetch(TAIKO_URL), taiko_ns)
+
+
+def _published_operators():
+    """いま棚に出ている版を会社ごとに引く（作れなかった会社の代わりに残すため）。"""
+    try:
+        doc = json.loads(fetch(PUBLISHED_URL, timeout=30))
+        return {op["key"]: op for op in doc.get("operators", [])}
+    except Exception as e:  # noqa: BLE001 — 取れなければ残せないだけ
+        print(f"  ⚠️ 公開中の版を取れませんでした: {e}", file=sys.stderr)
+        return {}
+
+
+def build(check_only=False):
+    """🔴 会社ごとに作って検査する。**1社が崩れても他社は配る**（2026-10-05 社長指示）。
+
+    崩れた会社は、いま棚に出ている版をそのまま残す（棚から消すと運転手の画面で
+    その航路が丸ごと消えるため）。崩れた・外した便があれば最後に非0で終わり、
+    作り直しの記録を赤にする（黙って直ったことにしない）。
+    """
+    today = dt.datetime.now(JST).date()
+    steps = [
+        ("cruise_hakata", "① クルーズ寄港予定", _build_cruise),
+        ("nomo_taiko", "② フェリー太古の時刻表と運休日", _build_taiko),
+        ("kyu_you", f"③ 九州郵船のダイヤ検索（{KYUYOU_DAYS}日分×3航路）",
+         parse_kyuyou),
+    ]
+    published = None
+    ops = []
+    for key, label, fn in steps:
+        print(f"{label}を取得中 …", flush=True)
+        try:
+            op = fn(today)
+            ng = check({"operators": [op]}, today)
+            if ng:
+                raise SystemExit("検査で止めました: " + " / ".join(ng))
+        except (SystemExit, Exception) as e:  # noqa: BLE001
+            PROBLEMS.append(f"{key}: 作れませんでした（{e}）")
+            if published is None:
+                published = _published_operators()
+            op = published.get(key)
+            if op:
+                print(f"  ⚠️ {key}: 作れないので公開中の版を残します", flush=True)
+            else:
+                print(f"  ✗ {key}: 作れず、残せる版もありません", flush=True)
+        if op:
+            ops.append(op)
 
     doc = {
         "version": 1,
         "generated_at": dt.datetime.now(JST).isoformat(timespec="seconds"),
-        "operators": [cruise, taiko, kyuyou],
+        "operators": ops,
     }
 
-    print("④ 検査")
+    print("④ 全体の検査")
     if check(doc, today):
         return 1
     if check_only:
         print("\n✓ 検査だけ実行しました（書き出していません）")
-        return 0
+        return _report_problems()
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
         f.write("\n")
     print(f"\n✓ 書き出しました: {OUT} ({os.path.getsize(OUT)/1024:.1f} KB)")
-    return 0
+    return _report_problems()
+
+
+def _report_problems():
+    """外した便・作れなかった会社を出す。あれば2で終わる（=書き出しは済み・要対応）。"""
+    if not PROBLEMS:
+        return 0
+    print("\n⚠️ 配りましたが、対応が要るものがあります:", file=sys.stderr)
+    for x in PROBLEMS:
+        print("   -", x, file=sys.stderr)
+        print(f"::error::{x}")
+    return 2
 
 
 if __name__ == "__main__":
