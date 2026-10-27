@@ -67,6 +67,7 @@ FILES = [
     # 🔴 港の到着（クルーズ客船・フェリー太古）も同じ理由で必ず回収する
     #    （2026-08-16 追加）。書き忘れると電車を作り直した回に棚から消える。
     "port_arrivals.json",             # クルーズ客船・離島航路（到着）
+    "hakata_shinkansen_arrivals.json",  # 博多に着く新幹線（AI日報・AI戦略の手がかり・2026-10-28）
 ] + [f"{slug}_subway_timetable.json" for slug in _CITY_CONFIGS]
 
 # 最低限これだけは棚に無いと異常（＝配信中止）。
