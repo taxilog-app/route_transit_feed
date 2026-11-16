@@ -1,0 +1,45 @@
+name: relay-watch
+
+# さくらの中継係（電車の運行情報・空港・会場をアプリに中継するサーバ）が
+# 生きているかを30分ごとに確かめる（社長指示 2026-11-16「案Aで作って」）。
+# 止まっていたらこの実行が「失敗」になり、GitHub からメールが届く。
+#
+# ・送るのは「生きてる？」（/health）だけ。合言葉・運転手のデータは使わない。
+# ・サーバの住所は公開の画面に出さないよう、置き場の秘密 RELAY_HOST に入れる。
+# ・中継係は自作の証明書なので -k（証明書の照合を省く）で叩く。/health は "ok" を
+#   返すだけで秘密は流れないので、照合を省いても失う物は無い。
+# ・一瞬の揺れで鳴らないよう、間をあけて3回試し、3回とも駄目な時だけ失敗にする。
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: relay-watch
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 中継係の安否確認
+        env:
+          RELAY_HOST: ${{ secrets.RELAY_HOST }}
+        run: |
+          if [ -z "$RELAY_HOST" ]; then
+            echo "::error::置き場の秘密 RELAY_HOST が設定されていない"; exit 1
+          fi
+          for i in 1 2 3; do
+            body=$(curl -sk --max-time 15 "https://$RELAY_HOST/health" || true)
+            if [ "$body" = "ok" ]; then
+              echo "中継係は動いています（${i}回目で確認）"; exit 0
+            fi
+            echo "${i}回目：応答なし／想定外の応答"
+            sleep 30
+          done
+          echo "::error::さくらの中継係が3回続けて応答しません。配布版の電車・空港の情報が止まっています。ssh taxilog-sakura で systemctl status taxilog-relay を確認"
+          exit 1
